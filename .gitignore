@@ -1,0 +1,19 @@
+# Unreal Engine generated folders
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+
+# IDE files
+.vs/
+.idea/
+*.sln
+*.vcxproj*
+*.VC.db
+*.opensdf
+*.sdf
+*.suo
+
+# Packaging and installer output
+Packaged/
+Installer/Output/
