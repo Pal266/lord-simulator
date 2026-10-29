@@ -94,7 +94,7 @@ If the packaged build is somewhere other than `Packaged\Windows`, pass its locat
 ## 6. Install and launch
 
 1. Run `LordSimulatorSetup.exe` on a 64-bit Windows system and accept the administrator prompt.
-2. The application installs to `C:\Program Files\Lord Simulator\`. The installer also installs the Unreal Engine runtime prerequisites silently.
+2. The application installs to `C:\Program Files\Lord Simulator\`. The installer also installs the Unreal Engine runtime prerequisites silently, and creates the `Lord Simulator` folder in your Documents folder.
 3. Launch `C:\Program Files\Lord Simulator\LordSimulator.exe`.
 
 It can be uninstalled from *Settings → Apps → Installed apps → Lord Simulator*.

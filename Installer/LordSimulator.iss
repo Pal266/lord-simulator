@@ -26,6 +26,11 @@ SolidCompression=yes
 PrivilegesRequired=admin
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\{#AppExeName}
+; The installer intentionally creates the per-user "Documents\Lord Simulator" folder.
+UsedUserAreasWarning=no
+
+[Dirs]
+Name: "{userdocs}\{#AppName}"
 
 [Files]
 Source: "{#PackagedDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
