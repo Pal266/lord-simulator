@@ -13,6 +13,7 @@ public:
 
 	virtual void ShutdownModule() override
 	{
+		LS_LOG_DEFAULT(TEXT("Application shutdown started."));
 		FLordSimulatorLog::Shutdown();
 	}
 };
