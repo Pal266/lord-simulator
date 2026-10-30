@@ -7,10 +7,12 @@
 #include "Misc/ScopeLock.h"
 #include "Templates/UniquePtr.h"
 
+#include <atomic>
+
 namespace LordSimulatorLog
 {
-	/** The active logging mode. No mechanism to change it exists yet. */
-	constexpr ELordSimulatorLogMode ActiveMode = ELordSimulatorLogMode::Default;
+	/** The active logging mode. Logging starts in Default mode; FLordSimulatorLog::SetMode changes it at runtime. */
+	std::atomic<ELordSimulatorLogMode> ActiveMode{ ELordSimulatorLogMode::Default };
 
 	FCriticalSection Mutex;
 	TUniquePtr<IFileHandle> File;
@@ -75,7 +77,12 @@ void FLordSimulatorLog::Shutdown()
 
 ELordSimulatorLogMode FLordSimulatorLog::GetMode()
 {
-	return LordSimulatorLog::ActiveMode;
+	return LordSimulatorLog::ActiveMode.load();
+}
+
+void FLordSimulatorLog::SetMode(ELordSimulatorLogMode Mode)
+{
+	LordSimulatorLog::ActiveMode.store(Mode);
 }
 
 bool FLordSimulatorLog::IsDevelopmentMode()

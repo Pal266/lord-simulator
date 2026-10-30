@@ -32,6 +32,9 @@ public:
 	/** Returns the active logging mode. */
 	static ELordSimulatorLogMode GetMode();
 
+	/** Applies a logging mode at runtime. Logging starts in Default mode. */
+	static void SetMode(ELordSimulatorLogMode Mode);
+
 	/** Returns true when Development-only entries are written. */
 	static bool IsDevelopmentMode();
 
