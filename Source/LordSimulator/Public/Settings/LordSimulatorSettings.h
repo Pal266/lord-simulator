@@ -26,7 +26,7 @@ struct FLordSimulatorSettingsData
 /**
  * Lord Simulator settings system.
  *
- * Persistent settings are stored in <Documents known folder>\Lord Simulator\settings.ini (INI format).
+ * Persistent settings are stored in <Documents known folder>\Lord Simulator\settings.ini (INI format, `[Settings]` section).
  * The file is always read and written as one complete settings state; individual settings are never
  * loaded from the file on their own. Runtime changes modify only the in-memory settings object.
  *

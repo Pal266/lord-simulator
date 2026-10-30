@@ -11,6 +11,7 @@ namespace LordSimulatorSettings
 	/** The current in-memory settings object. */
 	FLordSimulatorSettingsData Current;
 
+	const TCHAR* const SectionHeader = TEXT("[Settings]");
 	const TCHAR* const LogModeKey = TEXT("LogMode");
 	const TCHAR* const LogModeDefaultValue = TEXT("Default");
 	const TCHAR* const LogModeDevelopmentValue = TEXT("Development");
@@ -58,10 +59,10 @@ namespace LordSimulatorSettings
 		return Mode == ELordSimulatorLogMode::Development ? LogModeDevelopmentValue : LogModeDefaultValue;
 	}
 
-	/** Serializes the complete settings object in INI format. */
+	/** Serializes the complete settings object in INI format, inside the `[Settings]` section. */
 	FString Serialize(const FLordSimulatorSettingsData& Data)
 	{
-		return FString::Printf(TEXT("%s=%s%s"), LogModeKey, LogModeToString(Data.LogMode), LINE_TERMINATOR);
+		return FString::Printf(TEXT("%s%s%s=%s%s"), SectionHeader, LINE_TERMINATOR, LogModeKey, LogModeToString(Data.LogMode), LINE_TERMINATOR);
 	}
 
 	/** Reads the whole settings file as text. Returns false when the file cannot be read. */
@@ -92,49 +93,71 @@ namespace LordSimulatorSettings
 
 	/**
 	 * Parses INI text into a complete settings state.
-	 * Each `Key=Value` line is read with surrounding whitespace trimmed. Blank lines, comment lines
-	 * (starting with `;` or `#`) and section headers are ignored. Values are case-sensitive.
+	 *
+	 * Only `Key=Value` lines inside the exact, case-sensitive `[Settings]` section are read. Surrounding
+	 * whitespace of a section-header line, and of keys and values, is ignored; whitespace inside a section
+	 * header is not. Blank lines and lines beginning with `;` or `#` are ignored. Keys and values are
+	 * case-sensitive. A setting appearing more than once in the `[Settings]` section is invalid.
 	 */
 	FReadSettings Parse(const FString& Text)
 	{
-		TMap<FString, FString> Values;
+		bool bInSettingsSection = false;
+		int32 LogModeCount = 0;
+		FString LogModeValue;
 
 		TArray<FString> Lines;
 		Text.ParseIntoArrayLines(Lines, /*InCullEmpty*/ true);
 		for (const FString& RawLine : Lines)
 		{
 			const FString Line = RawLine.TrimStartAndEnd();
-			if (Line.IsEmpty() || Line.StartsWith(TEXT(";")) || Line.StartsWith(TEXT("#")) || Line.StartsWith(TEXT("[")))
+			if (Line.IsEmpty() || Line.StartsWith(TEXT(";")) || Line.StartsWith(TEXT("#")))
+			{
+				continue;
+			}
+
+			if (Line.StartsWith(TEXT("[")))
+			{
+				bInSettingsSection = Line.Equals(SectionHeader, ESearchCase::CaseSensitive);
+				continue;
+			}
+
+			if (!bInSettingsSection)
 			{
 				continue;
 			}
 
 			FString Key;
 			FString Value;
-			if (Line.Split(TEXT("="), &Key, &Value))
+			if (Line.Split(TEXT("="), &Key, &Value) && Key.TrimStartAndEnd().Equals(LogModeKey, ESearchCase::CaseSensitive))
 			{
-				Values.Add(Key.TrimStartAndEnd(), Value.TrimStartAndEnd());
+				++LogModeCount;
+				LogModeValue = Value.TrimStartAndEnd();
 			}
 		}
 
 		FReadSettings Result;
 
-		if (const FString* LogModeValue = Values.Find(LogModeKey))
+		if (LogModeCount == 0)
 		{
-			if (LogModeValue->Equals(LogModeDefaultValue, ESearchCase::CaseSensitive))
-			{
-				Result.Data.LogMode = ELordSimulatorLogMode::Default;
-				Result.LogModeState = ESettingReadState::Valid;
-			}
-			else if (LogModeValue->Equals(LogModeDevelopmentValue, ESearchCase::CaseSensitive))
-			{
-				Result.Data.LogMode = ELordSimulatorLogMode::Development;
-				Result.LogModeState = ESettingReadState::Valid;
-			}
-			else
-			{
-				Result.LogModeState = ESettingReadState::Invalid;
-			}
+			Result.LogModeState = ESettingReadState::Missing;
+		}
+		else if (LogModeCount > 1)
+		{
+			Result.LogModeState = ESettingReadState::Invalid;
+		}
+		else if (LogModeValue.Equals(LogModeDefaultValue, ESearchCase::CaseSensitive))
+		{
+			Result.Data.LogMode = ELordSimulatorLogMode::Default;
+			Result.LogModeState = ESettingReadState::Valid;
+		}
+		else if (LogModeValue.Equals(LogModeDevelopmentValue, ESearchCase::CaseSensitive))
+		{
+			Result.Data.LogMode = ELordSimulatorLogMode::Development;
+			Result.LogModeState = ESettingReadState::Valid;
+		}
+		else
+		{
+			Result.LogModeState = ESettingReadState::Invalid;
 		}
 
 		return Result;
