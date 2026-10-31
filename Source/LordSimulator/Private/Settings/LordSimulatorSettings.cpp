@@ -1,4 +1,5 @@
 #include "Settings/LordSimulatorSettings.h"
+#include "Localization/LordSimulatorLocalization.h"
 
 #include "GenericPlatform/GenericPlatformFile.h"
 #include "HAL/PlatformProcess.h"
@@ -29,11 +30,26 @@ namespace LordSimulatorSettings
 	{
 		FLordSimulatorSettingsData Data;
 		ESettingReadState LogModeState = ESettingReadState::Missing;
+		ESettingReadState LanguageState = ESettingReadState::Missing;
 
 		/** True when every required setting was present and valid. */
 		bool IsComplete() const
 		{
-			return LogModeState == ESettingReadState::Valid;
+			return LogModeState == ESettingReadState::Valid && LanguageState == ESettingReadState::Valid;
+		}
+
+		TArray<FString> GetIssues() const
+		{
+			TArray<FString> Issues;
+			if (LogModeState == ESettingReadState::Missing)
+				Issues.Add(TEXT("Setting 'LogMode' is missing. Default value 'Default' will be used."));
+			else if (LogModeState == ESettingReadState::Invalid)
+				Issues.Add(TEXT("Setting 'LogMode' has an invalid value. Default value 'Default' will be used."));
+			if (LanguageState == ESettingReadState::Missing)
+				Issues.Add(TEXT("Setting 'Language' is missing. Default value 'en' will be used."));
+			else if (LanguageState == ESettingReadState::Invalid)
+				Issues.Add(TEXT("Setting 'Language' has an invalid value. Default value 'en' will be used."));
+			return Issues;
 		}
 	};
 
@@ -62,7 +78,7 @@ namespace LordSimulatorSettings
 	/** Serializes the complete settings object in INI format, inside the `[Settings]` section. */
 	FString Serialize(const FLordSimulatorSettingsData& Data)
 	{
-		return FString::Printf(TEXT("%s%s%s=%s%s"), SectionHeader, LINE_TERMINATOR, LogModeKey, LogModeToString(Data.LogMode), LINE_TERMINATOR);
+		return FString::Printf(TEXT("%s%s%s=%s%sLanguage=%s%s"), SectionHeader, LINE_TERMINATOR, LogModeKey, LogModeToString(Data.LogMode), LINE_TERMINATOR, *Data.Language, LINE_TERMINATOR);
 	}
 
 	/** Reads the whole settings file as text. Returns false when the file cannot be read. */
@@ -104,6 +120,8 @@ namespace LordSimulatorSettings
 		bool bInSettingsSection = false;
 		int32 LogModeCount = 0;
 		FString LogModeValue;
+		int32 LanguageCount = 0;
+		FString LanguageValue;
 
 		TArray<FString> Lines;
 		Text.ParseIntoArrayLines(Lines, /*InCullEmpty*/ true);
@@ -128,7 +146,13 @@ namespace LordSimulatorSettings
 
 			FString Key;
 			FString Value;
-			if (Line.Split(TEXT("="), &Key, &Value) && Key.TrimStartAndEnd().Equals(LogModeKey, ESearchCase::CaseSensitive))
+			if (!Line.Split(TEXT("="), &Key, &Value)) continue;
+			if (Key.TrimStartAndEnd().Equals(TEXT("Language"), ESearchCase::CaseSensitive))
+			{
+				++LanguageCount;
+				LanguageValue = Value.TrimStartAndEnd();
+			}
+			if (Key.TrimStartAndEnd().Equals(LogModeKey, ESearchCase::CaseSensitive))
 			{
 				++LogModeCount;
 				LogModeValue = Value.TrimStartAndEnd();
@@ -160,6 +184,15 @@ namespace LordSimulatorSettings
 			Result.LogModeState = ESettingReadState::Invalid;
 		}
 
+		if (LanguageCount > 0)
+		{
+			Result.LanguageState = ESettingReadState::Invalid;
+			if (LanguageCount == 1 && FLordSimulatorLocalization::IsValidSetting(LanguageValue))
+			{
+				Result.LanguageState = ESettingReadState::Valid;
+				Result.Data.Language = LanguageValue;
+			}
+		}
 		return Result;
 	}
 
@@ -216,15 +249,10 @@ void FLordSimulatorSettings::Load()
 		{
 			const FReadSettings Read = Parse(Text);
 
-			if (Read.LogModeState == ESettingReadState::Missing)
+			for (const FString& Issue : Read.GetIssues())
 			{
-				LS_LOG_DEFAULT(TEXT("Setting 'LogMode' is missing. Default value 'Default' will be used."));
+				LS_LOG_DEFAULT(Issue);
 			}
-			else if (Read.LogModeState == ESettingReadState::Invalid)
-			{
-				LS_LOG_DEFAULT(TEXT("Setting 'LogMode' has an invalid value. Default value 'Default' will be used."));
-			}
-
 			NewState = Read.Data;
 		}
 	}
@@ -270,3 +298,41 @@ void FLordSimulatorSettings::SetLogMode(ELordSimulatorLogMode LogMode)
 {
 	LordSimulatorSettings::Current.LogMode = LogMode;
 }
+
+void FLordSimulatorSettings::SetLanguageFromLocalization(const FString& Language)
+{
+	LordSimulatorSettings::Current.Language = Language;
+}
+
+#if WITH_DEV_AUTOMATION_TESTS
+#include "Misc/AutomationTest.h"
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLordLocalizationSettingsTest, "LordSimulator.Localization.Settings", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FLordLocalizationSettingsTest::RunTest(const FString&)
+{
+	using namespace LordSimulatorSettings;
+	const FLordSimulatorSettingsData Defaults;
+	TestEqual(TEXT("Default language"), Defaults.Language, FString(TEXT("en")));
+	const FReadSettings Valid = Parse(Serialize(Defaults));
+	TestTrue(TEXT("Complete default serialization"), Valid.IsComplete());
+	TestTrue(TEXT("Roundtrip complete state"), Valid.Data == Defaults);
+	TestTrue(TEXT("Language serialized even at default"), Serialize(Defaults).Contains(TEXT("Language=en")));
+	const FReadSettings Missing = Parse(TEXT("[Settings]\nLogMode=Default\n"));
+	TestFalse(TEXT("Missing requires normal shutdown repair"), Missing.IsComplete());
+	TestEqual(TEXT("Missing defaults"), Missing.Data.Language, FString(TEXT("en")));
+	TestEqual(TEXT("Missing exact log"), Missing.GetIssues()[0], FString(TEXT("Setting 'Language' is missing. Default value 'en' will be used.")));
+	for (const FString& Lines : {FString(TEXT("Language=EN")), FString(TEXT("Language=en-US")), FString(TEXT("Language=")), FString(TEXT("Language=en\nLanguage=en"))})
+	{
+		const FReadSettings Invalid = Parse(TEXT("[Settings]\nLogMode=Default\n") + Lines);
+		TestFalse(TEXT("Invalid incomplete"), Invalid.IsComplete());
+		TestEqual(TEXT("Invalid default language"), Invalid.Data.Language, FString(TEXT("en")));
+		TestEqual(TEXT("Invalid exact log"), Invalid.GetIssues()[0], FString(TEXT("Setting 'Language' has an invalid value. Default value 'en' will be used.")));
+	}
+	FLordSimulatorSettingsData Changed = Defaults;
+	Changed.Language = TEXT("fr");
+	TestTrue(TEXT("Complete-state comparison includes Language"), Changed != Defaults);
+	const FReadSettings Complete = Parse(TEXT("[Settings]\nLanguage=en\nLogMode=Development\n"));
+	TestTrue(TEXT("Language and LogMode parsed together"), Complete.IsComplete());
+	TestEqual(TEXT("Other settings preserved"), Complete.Data.LogMode, ELordSimulatorLogMode::Development);
+	return true;
+}
+#endif

@@ -8,5 +8,9 @@ public class LordSimulator : ModuleRules
 		CppStandard = CppStandardVersion.Cpp20;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("Localization");
+		}
 	}
 }
