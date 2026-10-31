@@ -7,7 +7,7 @@
 		{
 			"Name": "LordSimulator",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostEngineInit"
 		}
 	],
 	"TargetPlatforms": [

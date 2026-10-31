@@ -11,10 +11,11 @@ struct FLordSimulatorSettingsData
 {
 	/** Persistent setting `LogMode`. Default: `Default`. */
 	ELordSimulatorLogMode LogMode = ELordSimulatorLogMode::Default;
+	FString Language = TEXT("en");
 
 	bool operator==(const FLordSimulatorSettingsData& Other) const
 	{
-		return LogMode == Other.LogMode;
+		return LogMode == Other.LogMode && Language.Equals(Other.Language, ESearchCase::CaseSensitive);
 	}
 
 	bool operator!=(const FLordSimulatorSettingsData& Other) const
@@ -52,4 +53,8 @@ public:
 
 	/** Changes `LogMode` in the in-memory settings object. */
 	static void SetLogMode(ELordSimulatorLogMode LogMode);
+
+private:
+	friend class FLordSimulatorLocalization;
+	static void SetLanguageFromLocalization(const FString& Language);
 };
