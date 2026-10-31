@@ -1,4 +1,5 @@
 #include "UI/LordSimulatorUISubsystem.h"
+#include "UI/LordSimulatorMainMenuWidget.h"
 #include "UI/LordSimulatorPrimaryUILayout.h"
 #include "Localization/LordSimulatorLocalization.h"
 #include "Input/CommonUIActionRouterBase.h"
@@ -46,7 +47,7 @@ bool ULordSimulatorUISubsystem::TryInitialize(bool bLocalizationStartupComplete)
 {
 	// Gate precedes even class loading/CreateWidget, where feature initialization could run.
 	if (!bLocalizationStartupComplete) return false;
-	if (IsUIAvailable()) return true;
+	if (IsUIAvailable()) return EnsureInitialMainMenu();
 	ReleaseRoot();
 	ULocalPlayer* Player = GetLocalPlayer();
 	APlayerController* Controller = Player ? Player->GetPlayerController(GetWorld()) : nullptr;
@@ -60,7 +61,21 @@ bool ULordSimulatorUISubsystem::TryInitialize(bool bLocalizationStartupComplete)
 	if (!Candidate->AddToPlayerScreen()) return false;
 	PrimaryLayout = Candidate;
 	PrimaryLayout->ActivateWidget();
-	return true;
+	return EnsureInitialMainMenu();
+}
+
+bool ULordSimulatorUISubsystem::EnsureInitialMainMenu()
+{
+	if (!IsUIAvailable()) return false;
+	if (MainMenu && PrimaryLayout->ContainsWidget(ELordSimulatorUILayer::Menu, MainMenu)) return true;
+	MainMenu = nullptr;
+
+	UClass* MainMenuClass = LoadClass<ULordSimulatorMainMenuWidget>(nullptr,
+		TEXT("/Game/UI/Screens/MainMenu/WBP_MainMenu.WBP_MainMenu_C"));
+	if (!MainMenuClass || MainMenuClass->HasAnyClassFlags(CLASS_Abstract)) return false;
+
+	MainMenu = Cast<ULordSimulatorMainMenuWidget>(PrimaryLayout->AddToLayer(ELordSimulatorUILayer::Menu, MainMenuClass));
+	return MainMenu != nullptr;
 }
 
 bool ULordSimulatorUISubsystem::IsUIAvailable() const
@@ -75,6 +90,7 @@ const ULordSimulatorPrimaryUILayout* ULordSimulatorUISubsystem::GetPrimaryLayout
 
 void ULordSimulatorUISubsystem::ReleaseRoot()
 {
+	MainMenu = nullptr;
 	if (PrimaryLayout)
 	{
 		PrimaryLayout->ClearLayers();
@@ -91,10 +107,14 @@ UUserWidget* ULordSimulatorUISubsystem::AddWidget(ELordSimulatorUILayer Layer, T
 
 bool ULordSimulatorUISubsystem::RemoveWidget(ELordSimulatorUILayer Layer, UUserWidget* Widget)
 {
-	return IsUIAvailable() && PrimaryLayout->RemoveFromLayer(Layer, Widget);
+	if (!IsUIAvailable()) return false;
+	const bool bRemoved = PrimaryLayout->RemoveFromLayer(Layer, Widget);
+	if (bRemoved && Widget == MainMenu) MainMenu = nullptr;
+	return bRemoved;
 }
 
 bool ULordSimulatorUISubsystem::PopWidget(ELordSimulatorUILayer Layer)
 {
-	return IsUIAvailable() && PrimaryLayout->RemoveFromLayer(Layer, PrimaryLayout->GetTopWidget(Layer));
+	if (!IsUIAvailable()) return false;
+	return RemoveWidget(Layer, PrimaryLayout->GetTopWidget(Layer));
 }
