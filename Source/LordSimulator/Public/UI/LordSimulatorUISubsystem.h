@@ -4,6 +4,7 @@
 #include "UI/LordSimulatorUILayer.h"
 #include "LordSimulatorUISubsystem.generated.h"
 
+class ULordSimulatorMainMenuWidget;
 class ULordSimulatorPrimaryUILayout;
 class UUserWidget;
 struct FLordSimulatorUITestAccess;
@@ -33,11 +34,14 @@ public:
 private:
 	friend struct FLordSimulatorUITestAccess;
 	bool TryInitialize(bool bLocalizationStartupComplete);
+	bool EnsureInitialMainMenu();
 	void ReleaseRoot();
 	void OnViewportReady();
 	void OnWorldCleanup(UWorld* World, bool bSessionEnded, bool bCleanupResources);
 	UPROPERTY(Transient)
 	TObjectPtr<ULordSimulatorPrimaryUILayout> PrimaryLayout;
+	UPROPERTY(Transient)
+	TObjectPtr<ULordSimulatorMainMenuWidget> MainMenu;
 	FDelegateHandle ViewportHandle;
 	FDelegateHandle CleanupHandle;
 };
