@@ -124,6 +124,7 @@ bool FLordSimulatorUIFrameworkTest::RunTest(const FString&)
 		TestNull(TEXT("Unrelated user widget rejected"), UI->AddWidget(ELordSimulatorUILayer::Game, UUserWidget::StaticClass()));
 		TestNull(TEXT("Invalid enum rejected"), UI->AddWidget(static_cast<ELordSimulatorUILayer>(255), ULordSimulatorUITestWidget::StaticClass()));
 		TestNull(TEXT("Nested viewport root rejected"), UI->AddWidget(ELordSimulatorUILayer::Game, Root->GetClass()));
+		TestTrue(TEXT("Production main menu can be removed for framework isolation"), UI->PopWidget(ELordSimulatorUILayer::Menu));
 		TestFalse(TEXT("Empty pop fails"), UI->PopWidget(ELordSimulatorUILayer::Menu));
 		TestFalse(TEXT("Null removal fails"), UI->RemoveWidget(ELordSimulatorUILayer::Game, nullptr));
 
