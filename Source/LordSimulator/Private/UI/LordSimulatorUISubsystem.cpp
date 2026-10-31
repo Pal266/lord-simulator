@@ -67,7 +67,12 @@ bool ULordSimulatorUISubsystem::TryInitialize(bool bLocalizationStartupComplete)
 bool ULordSimulatorUISubsystem::EnsureInitialMainMenu()
 {
 	if (!IsUIAvailable()) return false;
-	if (MainMenu && PrimaryLayout->ContainsWidget(ELordSimulatorUILayer::Menu, MainMenu)) return true;
+	if (bInitialMainMenuPresented) return true;
+	if (MainMenu && PrimaryLayout->ContainsWidget(ELordSimulatorUILayer::Menu, MainMenu))
+	{
+		bInitialMainMenuPresented = true;
+		return true;
+	}
 	MainMenu = nullptr;
 
 	UClass* MainMenuClass = LoadClass<ULordSimulatorMainMenuWidget>(nullptr,
@@ -75,7 +80,8 @@ bool ULordSimulatorUISubsystem::EnsureInitialMainMenu()
 	if (!MainMenuClass || MainMenuClass->HasAnyClassFlags(CLASS_Abstract)) return false;
 
 	MainMenu = Cast<ULordSimulatorMainMenuWidget>(PrimaryLayout->AddToLayer(ELordSimulatorUILayer::Menu, MainMenuClass));
-	return MainMenu != nullptr;
+	bInitialMainMenuPresented = MainMenu != nullptr;
+	return bInitialMainMenuPresented;
 }
 
 bool ULordSimulatorUISubsystem::IsUIAvailable() const
@@ -91,6 +97,7 @@ const ULordSimulatorPrimaryUILayout* ULordSimulatorUISubsystem::GetPrimaryLayout
 void ULordSimulatorUISubsystem::ReleaseRoot()
 {
 	MainMenu = nullptr;
+	bInitialMainMenuPresented = false;
 	if (PrimaryLayout)
 	{
 		PrimaryLayout->ClearLayers();
