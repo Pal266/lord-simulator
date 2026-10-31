@@ -8,9 +8,20 @@
 			"Name": "LordSimulator",
 			"Type": "Runtime",
 			"LoadingPhase": "PostEngineInit"
+		},
+		{
+			"Name": "LordSimulatorTests",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
 		}
 	],
 	"TargetPlatforms": [
 		"Windows"
+	],
+	"Plugins": [
+		{
+			"Name": "CommonUI",
+			"Enabled": true
+		}
 	]
 }
