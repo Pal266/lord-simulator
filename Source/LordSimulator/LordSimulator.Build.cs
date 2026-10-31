@@ -10,7 +10,7 @@ public class LordSimulator : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.Add("Localization");
+			PrivateDependencyModuleNames.AddRange(new string[] { "Localization", "UnrealEd" });
 		}
 	}
 }

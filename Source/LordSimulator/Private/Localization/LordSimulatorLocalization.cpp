@@ -41,22 +41,22 @@ static bool ValidateResources()
 	FString Native;
 	TArray<FString> Configured;
 	GConfig->GetArray(Section, TEXT("SupportedCultures"), Configured, GGameIni);
-	if (!GConfig->GetString(Section, TEXT("NativeCulture"), Native, GGameIni) || Native != TEXT("en")) return false;
+	if (!GConfig->GetString(Section, TEXT("NativeCulture"), Native, GGameIni) || !Native.Equals(TEXT("en"), ESearchCase::CaseSensitive)) return false;
 #if WITH_EDITOR
 	const ULocalizationTargetSet* Targets = ULocalizationSettings::GetGameTargetSet();
 	if (Targets->TargetObjects.Num() != 1) return false;
 	const ULocalizationTarget* Target = Targets->TargetObjects[0];
-	if (!Target || Target->Settings.Name != TEXT("LordSimulator")) return false;
+	if (!Target || !Target->Settings.Name.Equals(TEXT("LordSimulator"), ESearchCase::CaseSensitive)) return false;
 	TArray<FString> TargetCultures;
 	for (const auto& Culture : Target->Settings.SupportedCulturesStatistics) TargetCultures.Add(Culture.CultureName);
 	if (!FState::SameCultures(Configured, TargetCultures)
 		|| !TargetCultures.IsValidIndex(Target->Settings.NativeCultureIndex)
-		|| TargetCultures[Target->Settings.NativeCultureIndex] != TEXT("en")) return false;
+		|| !TargetCultures[Target->Settings.NativeCultureIndex].Equals(TEXT("en"), ESearchCase::CaseSensitive)) return false;
 #endif
 	const FString Directory = FPaths::ProjectContentDir() / TEXT("Localization/LordSimulator");
 	FTextLocalizationMetaDataResource Meta;
-	if (!Meta.LoadFromFile(Directory / TEXT("LordSimulator.locmeta")) || Meta.NativeCulture != TEXT("en")
-		|| Meta.NativeLocRes != TEXT("en/LordSimulator.locres")
+	if (!Meta.LoadFromFile(Directory / TEXT("LordSimulator.locmeta")) || !Meta.NativeCulture.Equals(TEXT("en"), ESearchCase::CaseSensitive)
+		|| !Meta.NativeLocRes.Equals(TEXT("en/LordSimulator.locres"), ESearchCase::CaseSensitive)
 		|| !FState::SameCultures(Configured, Meta.CompiledCultures)) return false;
 	for (const FString& Culture : Configured)
 	{
@@ -67,7 +67,7 @@ static bool ValidateResources()
 	return CanonicalTable.IsValid();
 }
 
-static bool Apply(const FString& Culture)
+bool ApplyCulture(const FString& Culture)
 {
 	if (!FInternationalization::Get().GetCulture(Culture).IsValid()) return false;
 #if WITH_EDITOR
@@ -76,10 +76,13 @@ static bool Apply(const FString& Culture)
 		// Unreal game-scoped text preview never changes the editor's language/locale.
 		if (FTextLocalizationManager::Get().GetNativeCultureName(ELocalizedTextSourceCategory::Game).IsEmpty()) return false;
 		FTextLocalizationManager::Get().EnableGameLocalizationPreview(Culture);
+		FTextLocalizationManager::Get().WaitForAsyncTasks();
 		return true;
 	}
 #endif
-	return FInternationalization::Get().SetCurrentLanguageAndLocale(Culture);
+	const bool bApplied = FInternationalization::Get().SetCurrentLanguageAndLocale(Culture);
+	FTextLocalizationManager::Get().WaitForAsyncTasks();
+	return bApplied;
 }
 
 }
@@ -87,7 +90,7 @@ static bool Apply(const FString& Culture)
 LordSimulatorLocalization::FState& FLordSimulatorLocalization::State()
 {
 	using namespace LordSimulatorLocalization;
-	static FState Instance({Discover, ValidateResources, Apply,
+	static FState Instance({Discover, ValidateResources, ApplyCulture,
 		[] { return FLordSimulatorSettings::Get().Language; },
 		[](const FString& Culture) { FLordSimulatorSettings::SetLanguageFromLocalization(Culture); },
 		[](const FString& Message) { LS_LOG_DEFAULT(Message); }});
@@ -104,3 +107,5 @@ bool FLordSimulatorLocalization::ChangeLanguage(const FString& Culture) { return
 void FLordSimulatorLocalization::ApplyStartupLanguage() { State().ApplyStartup(); }
 void FLordSimulatorLocalization::CompleteStartup() { State().CompleteStartup(); }
 bool FLordSimulatorLocalization::IsStartupComplete() { return State().IsStartupComplete(); }
+
+void FLordSimulatorLocalization::ReapplyActiveLanguage() { State().ReapplyActive(); }

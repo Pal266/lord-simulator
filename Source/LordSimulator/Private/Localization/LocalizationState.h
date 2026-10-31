@@ -4,6 +4,9 @@
 
 namespace LordSimulatorLocalization
 {
+// Applies through Unreal and waits until its resource work is complete.
+bool ApplyCulture(const FString& Culture);
+
 /** Internal environment seam; the same state machine is used by production and automation. */
 struct FEnvironment
 {
@@ -23,6 +26,7 @@ public:
 	bool IsSupported(const FString& Culture) const;
 	bool IsValidSetting(const FString& Culture) const;
 	void ApplyStartup();
+	void ReapplyActive();
 	bool Change(const FString& Culture);
 	void CompleteStartup() { bStartupComplete = true; }
 	bool IsStartupComplete() const { return bStartupComplete; }

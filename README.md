@@ -227,3 +227,17 @@ Packaging verification is separate from automation:
 4. Verify successful changes persist only through normal shutdown, and editor
    preview leaves editor language/locale unchanged. Repeat after installing the
    installer from section 5.
+
+
+Localization application waits for Unreal's asynchronous localization tasks before updating
+active state or reporting startup completion. In the editor, PIE world initialization
+restores the active game preview after Unreal's BeginPIE override, before actor initialization;
+ShutdownPIE restores it after Unreal's EndPIE reset. These restores do not repeat infrastructure
+initialization, alter settings, or emit duplicate success logs. If restoration fails, active
+state becomes unavailable so a later request can recover rather than take a stale no-op.
+Culture identifiers and target metadata are compared case-sensitively.
+
+The localization automation suite also covers casing mismatches, repeated lifecycle restores,
+restoration failure/recovery, and the production editor adapter's asynchronous completion.
+The PIE lifecycle test starts and stops two real sessions with a conflicting editor preview
+setting and checks restoration before actors begin play. Run the suite in an idle editor.

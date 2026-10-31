@@ -25,6 +25,8 @@ public:
 	/** Startup orchestration only: consume the complete, validated settings state. */
 	static void ApplyStartupLanguage();
 	static void CompleteStartup();
+	/** Restore game resources after an editor lifecycle override; never reinitialize or change settings. */
+	static void ReapplyActiveLanguage();
 private:
 	static LordSimulatorLocalization::FState& State();
 };
