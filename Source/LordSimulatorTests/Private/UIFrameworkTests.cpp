@@ -17,7 +17,11 @@
 #include "Tests/AutomationEditorCommon.h"
 #include "Misc/AutomationTest.h"
 #include "Layout/ArrangedChildren.h"
+#include "Layout/WidgetPath.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Widgets/SWidget.h"
+#include "Widgets/SViewport.h"
+#include "Input/HittestGrid.h"
 #include "UObject/UObjectIterator.h"
 
 struct FLordSimulatorUITestAccess
@@ -58,6 +62,18 @@ static int32 CountRoots(ULocalPlayer* Player)
 	for (TObjectIterator<ULordSimulatorPrimaryUILayout> It; It; ++It)
 		if (It->GetOwningLocalPlayer() == Player && It->IsInViewport()) ++Count;
 	return Count;
+}
+
+// Query Slate's painted hit-test grid, including enabled filtering, rather than
+// inferring interaction solely from UMG properties. Fixtures contain full-size buttons.
+static FWidgetPath HitTestRoot(const ULordSimulatorPrimaryUILayout* Root)
+{
+	const auto Widget = Root->GetCachedWidget();
+	const auto Window = FSlateApplication::Get().FindWidgetWindow(Widget.ToSharedRef());
+	if (!Window) return {};
+	const FGeometry& Geometry = Root->GetCachedGeometry();
+	return FWidgetPath(Window->GetHittestGrid().GetBubblePath(
+		Geometry.LocalToAbsolute(Geometry.GetLocalSize() * 0.5f), 0.f, false, 0));
 }
 }
 
@@ -128,7 +144,7 @@ bool FLordSimulatorUIFrameworkTest::RunTest(const FString&)
 		}
 		UWidget* Passive = FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::PassiveOverlay);
 		TestEqual(TEXT("Passive self and descendants are hit-test transparent"), Passive->GetVisibility(), ESlateVisibility::HitTestInvisible);
-		TestFalse(TEXT("Passive keyboard interaction disabled"), Passive->GetIsEnabled());
+		TestTrue(TEXT("Passive retains enabled presentation"), Passive->GetIsEnabled());
 
 		for (const auto Layer : {ELordSimulatorUILayer::Menu, ELordSimulatorUILayer::Modal})
 		{
@@ -150,6 +166,9 @@ bool FLordSimulatorUIFrameworkTest::RunTest(const FString&)
 		}
 		TestEqual(TEXT("Layer changes preserve pause state"), GEditor->PlayWorld->IsPaused(), bWasPaused);
 		UI->AddWidget(ELordSimulatorUILayer::Game, ULordSimulatorUITestWidget::StaticClass());
+		UI->AddWidget(ELordSimulatorUILayer::PassiveOverlay, ULordSimulatorUITestWidget::StaticClass());
+		// CommonUI deliberately does not steal focus from editor tools during PIE.
+		FSlateApplication::Get().SetUserFocus(0, Player->ViewportClient->GetGameViewportWidget());
 		UI->AddWidget(ELordSimulatorUILayer::Menu, ULordSimulatorUITestScreen::StaticClass());
 		return true;
 	}));
@@ -161,6 +180,11 @@ bool FLordSimulatorUIFrameworkTest::RunTest(const FString&)
 		if (!UI || !UI->IsUIAvailable()) return true;
 		auto* Router = UI->GetLocalPlayer()->GetSubsystem<UCommonUIActionRouterBase>();
 		TestEqual(TEXT("Menu is actual routed input mode"), Router->GetActiveInputMode(), ECommonInputMode::Menu);
+		const auto* Root = UI->GetPrimaryLayout();
+		const FWidgetPath Hit = HitTestRoot(Root);
+		AddInfo(FString::Printf(TEXT("Menu pointer path: %s; root geometry: %s"), *Hit.ToString(), *Root->GetCachedGeometry().ToString()));
+		TestTrue(TEXT("Pointer reaches menu through passive overlay"), Hit.ContainsWidget(Root->GetTopWidget(ELordSimulatorUILayer::Menu)->GetRootWidget()->GetCachedWidget().Get()));
+		TestFalse(TEXT("Passive layer absent from pointer path"), Hit.ContainsWidget(FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::PassiveOverlay)->GetCachedWidget().Get()));
 		UI->AddWidget(ELordSimulatorUILayer::Modal, ULordSimulatorUITestScreen::StaticClass());
 		return true;
 	}));
@@ -173,8 +197,15 @@ bool FLordSimulatorUIFrameworkTest::RunTest(const FString&)
 		auto* Modal = Cast<UCommonActivatableWidget>(Root->GetTopWidget(ELordSimulatorUILayer::Modal));
 		TestNotNull(TEXT("Modal displayed above menu"), Modal);
 		TestTrue(TEXT("Modal is independent CommonUI routing root"), Modal && Modal->IsModal());
-		TestFalse(TEXT("Game interaction blocked by modal"), FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::Game)->GetIsEnabled());
-		TestFalse(TEXT("Menu interaction blocked by modal"), FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::Menu)->GetIsEnabled());
+		const FWidgetPath Hit = HitTestRoot(Root);
+		TestTrue(TEXT("Pointer reaches modal content"), Modal && Hit.ContainsWidget(Modal->GetRootWidget()->GetCachedWidget().Get()));
+		for (const auto Layer : {ELordSimulatorUILayer::Game, ELordSimulatorUILayer::Menu, ELordSimulatorUILayer::PassiveOverlay})
+		{
+			UWidget* Container = FLordSimulatorUITestAccess::Layer(Root, Layer);
+			TestFalse(TEXT("Blocked layer absent from pointer path"), Hit.ContainsWidget(Container->GetCachedWidget().Get()));
+			TestTrue(TEXT("Blocked layer retains enabled presentation"), Container->GetIsEnabled());
+		}
+		TestTrue(TEXT("CommonUI gives keyboard focus to modal"), Modal && Modal->HasUserFocus(UI->GetLocalPlayer()->GetPlayerController(GEditor->PlayWorld)));
 		TestEqual(TEXT("Modal actual input mode"), UI->GetLocalPlayer()->GetSubsystem<UCommonUIActionRouterBase>()->GetActiveInputMode(), ECommonInputMode::Menu);
 
 		// Arrange the actual root hierarchy at the five required shapes and two DPI scales.
@@ -197,8 +228,8 @@ bool FLordSimulatorUIFrameworkTest::RunTest(const FString&)
 			}
 		}
 		TestTrue(TEXT("Remove modal"), UI->PopWidget(ELordSimulatorUILayer::Modal));
-		TestTrue(TEXT("Game interaction restored"), FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::Game)->GetIsEnabled());
-		TestTrue(TEXT("Menu interaction restored"), FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::Menu)->GetIsEnabled());
+		TestEqual(TEXT("Game pointer eligibility restored"), FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::Game)->GetVisibility(), ESlateVisibility::SelfHitTestInvisible);
+		TestEqual(TEXT("Menu pointer eligibility restored"), FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::Menu)->GetVisibility(), ESlateVisibility::SelfHitTestInvisible);
 		TestTrue(TEXT("Remove menu"), UI->PopWidget(ELordSimulatorUILayer::Menu));
 		return true;
 	}));
@@ -208,6 +239,10 @@ bool FLordSimulatorUIFrameworkTest::RunTest(const FString&)
 		auto* UI = GetUI();
 		if (!UI || !UI->IsUIAvailable()) return true;
 		TestEqual(TEXT("CommonUI restores combined baseline"), UI->GetLocalPlayer()->GetSubsystem<UCommonUIActionRouterBase>()->GetActiveInputMode(), ECommonInputMode::All);
+		const auto* Root = UI->GetPrimaryLayout();
+		auto* GameLayer = Cast<UOverlay>(FLordSimulatorUITestAccess::Layer(Root, ELordSimulatorUILayer::Game));
+		auto* GameWidget = Cast<UUserWidget>(GameLayer->GetChildAt(0));
+		TestTrue(TEXT("Pointer reaches game after closing screens through passive overlay"), HitTestRoot(Root).ContainsWidget(GameWidget->GetRootWidget()->GetCachedWidget().Get()));
 		auto* Player = UI->GetLocalPlayer();
 		FLordSimulatorUITestAccess::Release(UI);
 		TestEqual(TEXT("Release detaches the root"), CountRoots(Player), 0);

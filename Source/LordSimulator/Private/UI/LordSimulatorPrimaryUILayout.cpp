@@ -33,7 +33,6 @@ void ULordSimulatorPrimaryUILayout::NativeOnInitialized()
 	Menu->OnDisplayedWidgetChanged().AddUObject(this, &ThisClass::RefreshLayerInteraction);
 	Modal->OnDisplayedWidgetChanged().AddUObject(this, &ThisClass::RefreshLayerInteraction);
 	PassiveOverlay->SetVisibility(ESlateVisibility::HitTestInvisible);
-	PassiveOverlay->SetIsEnabled(false);
 	RefreshLayerInteraction();
 }
 
@@ -134,8 +133,7 @@ void ULordSimulatorPrimaryUILayout::RefreshLayerInteraction(UCommonActivatableWi
 	const bool bModal = Modal->GetActiveWidget() != nullptr;
 	// CommonUI owns focus/input routing. This separately closes the pointer hit-test path
 	// through lower UMG layers, including empty space around a modal's visual contents.
-	Game->SetIsEnabled(!bModal);
-	Menu->SetIsEnabled(!bModal);
+	// Preserve enabled state: disabling a parent also imposes disabled painting on descendants.
 	Game->SetVisibility(bModal ? ESlateVisibility::HitTestInvisible : ESlateVisibility::SelfHitTestInvisible);
 	Menu->SetVisibility(Menu->GetActiveWidget()
 		? (bModal ? ESlateVisibility::HitTestInvisible : ESlateVisibility::SelfHitTestInvisible)

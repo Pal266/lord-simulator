@@ -280,11 +280,13 @@ ascending visual order:
 | `Game` | Multiple ordinary or activatable widgets; combined game/UI input baseline. |
 | `Menu` | Activatable stack; only its top is displayed/active, with menu input blocking world commands. |
 | `Modal` | Activatable stack above Menu; blocks lower UI and world commands. |
-| `PassiveOverlay` | Multiple ordinary or activatable widgets; self and descendants are hit-test transparent and input-disabled. |
+| `PassiveOverlay` | Multiple ordinary or activatable widgets; self and descendants are hit-test transparent, with no activation focus/input mode. |
 
 Closing a screen restores the underlying CommonUI state without reconstructing
 unrelated UI. CommonUI owns focus restoration; feature screens may provide their
-desired focus target. No layer changes simulation pause or time. The empty root
+desired focus target. No layer changes simulation pause or time. Layer routing
+preserves widget enabled state: input blocking does not impose disabled visual
+styling on passive content or on Game/Menu behind a modal. The empty root
 contains no production text, art, HUD or menu. Keep screen-space content under
 `/Game/UI`, with shared technical infrastructure under `/Game/UI/Framework`.
 That framework directory is explicitly cooked because the root loads by path.
