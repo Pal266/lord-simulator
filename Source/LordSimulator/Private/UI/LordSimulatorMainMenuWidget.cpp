@@ -2,6 +2,7 @@
 
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Styling/CoreStyle.h"
 
@@ -90,7 +91,8 @@ void ULordSimulatorMainMenuWidget::ConfigureLabel(UTextBlock* Label, const TCHAR
 	if (!Label) return;
 
 	Label->SetText(FText::FromStringTable(LordSimulatorMainMenu::StringTableId, FString(StringTableKey)));
-	FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 32, FFontOutlineSettings());
+	FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 32);
+	Font.OutlineSettings.OutlineSize = 0;
 	Label->SetFont(Font);
 	Label->SetJustification(ETextJustify::Center);
 	Label->SetColorAndOpacity(Color);
@@ -107,7 +109,7 @@ void ULordSimulatorMainMenuWidget::UpdateQuitPresentation()
 	const bool bHoverOrFocus = QuitButton->IsHovered() || bQuitFocusPath;
 	if (bHoverOrFocus && !bQuitPressed)
 	{
-		Style.SetNormal(MainMenuButtonStyle.GetHovered());
+		Style.SetNormal(MainMenuButtonStyle.Hovered);
 	}
 	QuitButton->SetStyle(Style);
 
