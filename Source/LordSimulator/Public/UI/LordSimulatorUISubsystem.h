@@ -42,6 +42,7 @@ private:
 	TObjectPtr<ULordSimulatorPrimaryUILayout> PrimaryLayout;
 	UPROPERTY(Transient)
 	TObjectPtr<ULordSimulatorMainMenuWidget> MainMenu;
+	bool bInitialMainMenuPresented = false;
 	FDelegateHandle ViewportHandle;
 	FDelegateHandle CleanupHandle;
 };
