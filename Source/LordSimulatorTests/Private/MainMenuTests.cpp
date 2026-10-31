@@ -124,13 +124,13 @@ bool FLordSimulatorMainMenuTest::RunTest(const FString&)
 		CheckLabel(*this, FLordSimulatorMainMenuTestAccess::QuitLabel(Menu), TEXT("MainMenu.Quit"), TEXT("QUIT"));
 
 		const FButtonStyle& Style = FLordSimulatorMainMenuTestAccess::Style(Menu);
-		TestEqual(TEXT("Normal button texture"), ResourcePath(Style.GetNormal()),
+		TestEqual(TEXT("Normal button texture"), ResourcePath(Style.Normal),
 			FString(TEXT("/Game/UI/Textures/MainMenu/T_MainMenuButtonNormal.T_MainMenuButtonNormal")));
-		TestEqual(TEXT("Hover/focus button texture"), ResourcePath(Style.GetHovered()),
+		TestEqual(TEXT("Hover/focus button texture"), ResourcePath(Style.Hovered),
 			FString(TEXT("/Game/UI/Textures/MainMenu/T_MainMenuButtonHover.T_MainMenuButtonHover")));
-		TestEqual(TEXT("Pressed button texture"), ResourcePath(Style.GetPressed()),
+		TestEqual(TEXT("Pressed button texture"), ResourcePath(Style.Pressed),
 			FString(TEXT("/Game/UI/Textures/MainMenu/T_MainMenuButtonPressed.T_MainMenuButtonPressed")));
-		TestEqual(TEXT("Disabled button texture"), ResourcePath(Style.GetDisabled()),
+		TestEqual(TEXT("Disabled button texture"), ResourcePath(Style.Disabled),
 			FString(TEXT("/Game/UI/Textures/MainMenu/T_MainMenuButtonDisabled.T_MainMenuButtonDisabled")));
 
 		return true;
