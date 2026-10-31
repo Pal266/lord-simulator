@@ -2,7 +2,6 @@
 
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
-#include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Styling/CoreStyle.h"
 
@@ -83,7 +82,6 @@ void ULordSimulatorMainMenuWidget::ConfigureButton(UButton* Button, bool bEnable
 {
 	if (!Button) return;
 	Button->SetStyle(MainMenuButtonStyle);
-	Button->SetIsFocusable(bEnabled);
 	Button->SetIsEnabled(bEnabled);
 }
 
@@ -92,8 +90,7 @@ void ULordSimulatorMainMenuWidget::ConfigureLabel(UTextBlock* Label, const TCHAR
 	if (!Label) return;
 
 	Label->SetText(FText::FromStringTable(LordSimulatorMainMenu::StringTableId, FString(StringTableKey)));
-	FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 32);
-	Font.OutlineSettings.OutlineSize = 0;
+	FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 32, FFontOutlineSettings());
 	Label->SetFont(Font);
 	Label->SetJustification(ETextJustify::Center);
 	Label->SetColorAndOpacity(Color);
