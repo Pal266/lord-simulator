@@ -194,9 +194,36 @@ bool FLordLocalizationProjectTest::RunTest(const FString&)
 	if (Table)
 	{
 		TestEqual(TEXT("Asset assigned ID"), Table->GetStringTableId(), FName(TEXT("/Game/Localization/ST_LordSimulator.ST_LordSimulator")));
-		int32 Entries = 0;
-		Table->GetStringTable()->EnumerateSourceStrings([&](const FString&, const FString&) { ++Entries; return true; });
-		TestEqual(TEXT("No placeholder entries"), Entries, 0);
+		TMap<FString, FString> Entries;
+
+Table->GetStringTable()->EnumerateSourceStrings(
+	[&](const FString& Key, const FString& Source)
+	{
+		Entries.Add(Key, Source);
+		return true;
+	});
+
+TestEqual(TEXT("Four production String Table entries"), Entries.Num(), 4);
+
+TestEqual(
+	TEXT("MainMenu.NewGame source"),
+	Entries.FindRef(TEXT("MainMenu.NewGame")),
+	FString(TEXT("NEW GAME")));
+
+TestEqual(
+	TEXT("MainMenu.LoadGame source"),
+	Entries.FindRef(TEXT("MainMenu.LoadGame")),
+	FString(TEXT("LOAD GAME")));
+
+TestEqual(
+	TEXT("MainMenu.Settings source"),
+	Entries.FindRef(TEXT("MainMenu.Settings")),
+	FString(TEXT("SETTINGS")));
+
+TestEqual(
+	TEXT("MainMenu.Quit source"),
+	Entries.FindRef(TEXT("MainMenu.Quit")),
+	FString(TEXT("QUIT")));
 	}
 	return true;
 }
