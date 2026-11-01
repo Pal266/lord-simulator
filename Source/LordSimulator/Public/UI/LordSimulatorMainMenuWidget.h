@@ -26,7 +26,7 @@ protected:
 private:
 	friend struct FLordSimulatorMainMenuTestAccess;
 
-	void ConfigureButton(UButton* Button, bool bEnabled);
+	void ConfigureButton(UButton* Button, bool bEnabled, bool bFocusable);
 	void ConfigureLabel(UTextBlock* Label, const TCHAR* StringTableKey, const FLinearColor& Color);
 	void UpdateQuitPresentation();
 

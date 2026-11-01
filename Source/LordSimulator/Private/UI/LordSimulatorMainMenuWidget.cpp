@@ -30,10 +30,10 @@ void ULordSimulatorMainMenuWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	ConfigureButton(NewGameButton, false);
-	ConfigureButton(LoadGameButton, false);
-	ConfigureButton(SettingsButton, false);
-	ConfigureButton(QuitButton, true);
+	ConfigureButton(NewGameButton, false, false);
+	ConfigureButton(LoadGameButton, false, false);
+	ConfigureButton(SettingsButton, false, false);
+	ConfigureButton(QuitButton, true, true);
 
 	ConfigureLabel(NewGameLabel, TEXT("MainMenu.NewGame"), LordSimulatorMainMenu::DisabledColor);
 	ConfigureLabel(LoadGameLabel, TEXT("MainMenu.LoadGame"), LordSimulatorMainMenu::DisabledColor);
@@ -79,11 +79,12 @@ void ULordSimulatorMainMenuWidget::NativeOnRemovedFromFocusPath(const FFocusEven
 	UpdateQuitPresentation();
 }
 
-void ULordSimulatorMainMenuWidget::ConfigureButton(UButton* Button, bool bEnabled)
+void ULordSimulatorMainMenuWidget::ConfigureButton(UButton* Button, bool bEnabled, bool bFocusable)
 {
 	if (!Button) return;
 	Button->SetStyle(MainMenuButtonStyle);
 	Button->SetIsEnabled(bEnabled);
+	Button->SetIsFocusable(bFocusable);
 }
 
 void ULordSimulatorMainMenuWidget::ConfigureLabel(UTextBlock* Label, const TCHAR* StringTableKey, const FLinearColor& Color)

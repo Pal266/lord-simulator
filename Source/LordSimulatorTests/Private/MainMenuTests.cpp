@@ -2,9 +2,11 @@
 #include "UI/LordSimulatorPrimaryUILayout.h"
 #include "UI/LordSimulatorUISubsystem.h"
 
+#include "CommonGameViewportClient.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Engine/LocalPlayer.h"
+#include "Framework/Application/SlateApplication.h"
 #include "GameFramework/PlayerController.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/AutomationEditorCommon.h"
@@ -28,6 +30,16 @@ struct FLordSimulatorMainMenuTestAccess
 
 namespace LordSimulatorMainMenuTests
 {
+class FWaitForUIFrames : public IAutomationLatentCommand
+{
+	uint64 FirstFrame = MAX_uint64;
+	virtual bool Update() override
+	{
+		if (FirstFrame == MAX_uint64) FirstFrame = GFrameCounter;
+		return GFrameCounter >= FirstFrame + 3;
+	}
+};
+
 static ULordSimulatorUISubsystem* GetUI()
 {
 	APlayerController* Controller = GEditor && GEditor->PlayWorld ? GEditor->PlayWorld->GetFirstPlayerController() : nullptr;
@@ -133,6 +145,43 @@ bool FLordSimulatorMainMenuTest::RunTest(const FString&)
 		TestEqual(TEXT("Disabled button texture"), ResourcePath(Style.Disabled),
 			FString(TEXT("/Game/UI/Textures/MainMenu/T_MainMenuButtonDisabled.T_MainMenuButtonDisabled")));
 
+		APlayerController* Controller = GEditor->PlayWorld->GetFirstPlayerController();
+		ULocalPlayer* Player = Controller ? Controller->GetLocalPlayer() : nullptr;
+		TestNotNull(TEXT("PIE player controller for focus verification"), Controller);
+		if (!Player || !Player->ViewportClient)
+		{
+			AddError(TEXT("PIE game viewport unavailable for focus verification."));
+			return true;
+		}
+
+		// PIE deliberately leaves focus with editor tools. Give the game viewport user focus,
+		// then activate the production menu class through the canonical stack so CommonUI's
+		// real activation-focus path is exercised instead of only inspecting DesiredFocusTarget.
+		FSlateApplication::Get().SetUserFocus(0, Player->ViewportClient->GetGameViewportWidget());
+		UClass* MainMenuClass = Menu->GetClass();
+		TestTrue(TEXT("Remove startup main menu for activation-focus verification"),
+			UI->PopWidget(ELordSimulatorUILayer::Menu));
+		auto* FocusMenu = Cast<ULordSimulatorMainMenuWidget>(UI->AddWidget(ELordSimulatorUILayer::Menu, MainMenuClass));
+		TestNotNull(TEXT("Production main menu reactivated for runtime focus verification"), FocusMenu);
+
+		return true;
+	}));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForUIFrames());
+	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([this]()
+	{
+		ULordSimulatorUISubsystem* UI = GetUI();
+		if (!UI || !UI->IsUIAvailable())
+		{
+			AddError(TEXT("PIE main UI unavailable during focus verification."));
+			return true;
+		}
+
+		const ULordSimulatorPrimaryUILayout* Root = UI->GetPrimaryLayout();
+		auto* Menu = Root ? Cast<ULordSimulatorMainMenuWidget>(Root->GetTopWidget(ELordSimulatorUILayer::Menu)) : nullptr;
+		UButton* Quit = Menu ? FLordSimulatorMainMenuTestAccess::Quit(Menu) : nullptr;
+		APlayerController* Controller = GEditor && GEditor->PlayWorld ? GEditor->PlayWorld->GetFirstPlayerController() : nullptr;
+		TestTrue(TEXT("Quit receives actual CommonUI user focus after main-menu activation"),
+			Quit && Controller && Quit->HasUserFocus(Controller));
 		return true;
 	}));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
