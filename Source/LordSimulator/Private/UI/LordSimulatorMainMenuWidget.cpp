@@ -84,7 +84,7 @@ void ULordSimulatorMainMenuWidget::ConfigureButton(UButton* Button, bool bEnable
 	if (!Button) return;
 	Button->SetStyle(MainMenuButtonStyle);
 	Button->SetIsEnabled(bEnabled);
-	Button->SetIsFocusable(bFocusable);
+	Button->IsFocusable = bFocusable;
 }
 
 void ULordSimulatorMainMenuWidget::ConfigureLabel(UTextBlock* Label, const TCHAR* StringTableKey, const FLinearColor& Color)
