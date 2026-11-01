@@ -4,7 +4,7 @@
 #include "UI/LordSimulatorActivatableWidget.h"
 #include "LordSimulatorMainMenuWidget.generated.h"
 
-class UButton;
+class ULordSimulatorMainMenuButton;
 class UTextBlock;
 struct FLordSimulatorMainMenuTestAccess;
 
@@ -26,7 +26,7 @@ protected:
 private:
 	friend struct FLordSimulatorMainMenuTestAccess;
 
-	void ConfigureButton(UButton* Button, bool bEnabled, bool bFocusable);
+	void ConfigureButton(ULordSimulatorMainMenuButton* Button, bool bEnabled, bool bFocusable);
 	void ConfigureLabel(UTextBlock* Label, const TCHAR* StringTableKey, const FLinearColor& Color);
 	void UpdateQuitPresentation();
 
@@ -46,13 +46,13 @@ private:
 	FButtonStyle MainMenuButtonStyle;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> NewGameButton;
+	TObjectPtr<ULordSimulatorMainMenuButton> NewGameButton;
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> LoadGameButton;
+	TObjectPtr<ULordSimulatorMainMenuButton> LoadGameButton;
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> SettingsButton;
+	TObjectPtr<ULordSimulatorMainMenuButton> SettingsButton;
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> QuitButton;
+	TObjectPtr<ULordSimulatorMainMenuButton> QuitButton;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> NewGameLabel;
