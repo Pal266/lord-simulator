@@ -1,4 +1,5 @@
 #include "UI/LordSimulatorMainMenuWidget.h"
+#include "UI/LordSimulatorMainMenuButton.h"
 #include "UI/LordSimulatorPrimaryUILayout.h"
 #include "UI/LordSimulatorUISubsystem.h"
 
