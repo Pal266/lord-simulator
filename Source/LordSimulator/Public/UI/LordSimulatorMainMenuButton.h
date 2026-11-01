@@ -7,7 +7,7 @@
  * Main-menu button whose focusability is configured by production C++ before
  * the underlying Slate button is constructed.
  */
-UCLASS(meta = (DisableNativeTick))
+UCLASS(BlueprintType, Blueprintable, meta = (DisplayName = "Lord Simulator Main Menu Button"))
 class LORDSIMULATOR_API ULordSimulatorMainMenuButton : public UButton
 {
 	GENERATED_BODY()
