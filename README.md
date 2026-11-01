@@ -1,8 +1,7 @@
 # Lord Simulator
 
 Unreal Engine 5.8.4 C++ project (`LordSimulator`) targeting 64-bit Windows.
-This README describes how to go from a clone of this repository to the
-installer `LordSimulatorSetup.exe`.
+This README describes how to go from a clone of this repository to the installer `LordSimulatorSetup.exe`.
 
 ## Repository layout
 
@@ -12,7 +11,9 @@ installer `LordSimulatorSetup.exe`.
 | `Source/LordSimulator.Target.cs` | Game target `LordSimulator` (C++20) |
 | `Source/LordSimulatorEditor.Target.cs` | Editor target `LordSimulatorEditor` (C++20) |
 | `Source/LordSimulator/` | Primary C++ module `LordSimulator` |
-| `Config/` | Project configuration (display name, startup map, packaging settings) |
+| `Config/` | Project configuration, localization configuration and packaging settings |
+| `Content/Localization/` | Canonical String Table and compiled Lord Simulator localization resources |
+| `Content/UI/` | Production and framework UI assets |
 | `Installer/LordSimulator.iss` | Inno Setup script that produces `LordSimulatorSetup.exe` |
 
 ## Prerequisites
@@ -20,15 +21,14 @@ installer `LordSimulatorSetup.exe`.
 All steps run on 64-bit Windows 10 or Windows 11.
 
 1. **Unreal Engine 5.8.4**
-   - Install it from the Epic Games Launcher (Unreal Engine → Library → add 5.8, then make sure the installed version is 5.8.4).
+   - Install it from the Epic Games Launcher.
    - The default install location is `C:\Program Files\Epic Games\UE_5.8`. The commands below refer to this folder as `%UE_ROOT%`.
 2. **Visual Studio 2022 (17.14 or later) or Visual Studio 2026 (18.0 or later)** with:
    - Workloads: *Game development with C++*, *Desktop development with C++*, *.NET desktop development*.
    - Under *Game development with C++*: *Unreal Engine installer* and a Windows 10/11 SDK.
-   - MSVC toolset 14.38 or newer and Windows SDK 10.0.22621.0 or newer (Epic recommends MSVC 14.50 and Windows SDK 10.0.26100).
-   - Check Epic's *Setting Up Visual Studio for Unreal Engine* page for the current 5.8 requirements.
-3. **Inno Setup 6.3 or later** (https://jrsoftware.org/isinfo.php). It provides `ISCC.exe`, by default in `C:\Program Files (x86)\Inno Setup 6\`.
-4. **Git**, to clone the repository.
+   - MSVC toolset 14.38 or newer and Windows SDK 10.0.22621.0 or newer. Unreal Engine 5.8 currently prefers MSVC 14.50; newer installed toolchains may produce a warning even when the build succeeds.
+3. **Inno Setup 6.3 or later**. It provides `ISCC.exe`, by default in `C:\Program Files (x86)\Inno Setup 6\`.
+4. **Git**.
 
 ## 1. Clone the repository
 
@@ -37,297 +37,197 @@ git clone https://github.com/Pal266/lord-simulator.git
 cd lord-simulator
 ```
 
-All commands below run from the repository root in a Windows command prompt (`cmd.exe`). First set the engine path:
+All commands below run from the repository root in `cmd.exe`.
 
 ```bat
 set UE_ROOT=C:\Program Files\Epic Games\UE_5.8
 ```
 
-## 2. Build the C++ project
+## 2. Build the Development Editor target
 
-Build the editor target:
+Close any running Unreal Editor/game instance before command-line builds if Live Coding is active.
 
 ```bat
 "%UE_ROOT%\Engine\Build\BatchFiles\Build.bat" LordSimulatorEditor Win64 Development -Project="%CD%\LordSimulator.uproject" -WaitMutex
 ```
 
-Alternatively, right-click `LordSimulator.uproject` → *Generate Visual Studio project files*, open `LordSimulator.sln`, select the `Development Editor` / `Win64` configuration and build.
+Alternatively, generate Visual Studio project files, open `LordSimulator.sln`, select `Development Editor` / `Win64`, and build.
 
 ## 3. Launch the compiled project
 
-Open the project in the editor:
+Editor:
 
 ```bat
 "%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor.exe" "%CD%\LordSimulator.uproject"
 ```
 
-Or run it directly as a game (window titled *Lord Simulator*):
+Game mode:
 
 ```bat
 "%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor.exe" "%CD%\LordSimulator.uproject" -game
 ```
 
-## 4. Produce the Windows x64 packaged build
+## 4. Run automated tests
 
-```bat
-"%UE_ROOT%\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun -project="%CD%\LordSimulator.uproject" -platform=Win64 -clientconfig=Shipping -build -cook -stage -pak -prereqs -archive -archivedirectory="%CD%\Packaged" -noP4 -utf8output
-```
+Open an idle Unreal Editor session and use **Tools → Session Frontend → Automation**. Run the top-level `LordSimulator` test group.
 
-The packaged build is written to `Packaged\Windows\`. It contains `LordSimulator.exe` and the Unreal prerequisites installer (`Engine\Extras\Redist\en-us\UEPrereqSetup_x64.exe`).
+The suite includes localization regressions, `LordSimulator.UI.Framework`, and `LordSimulator.UI.MainMenu`.
 
-The editor's *Platforms → Windows → Package Project* menu produces the same build. If you use it, choose the `Packaged` folder in the repository root as the output folder.
+The UI tests start PIE and require Slate/viewport rendering; do not use `-nullrhi` for the complete UI suite.
 
-## 5. Produce the installer
-
-```bat
-"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" Installer\LordSimulator.iss
-```
-
-The installer is written to `Installer\Output\LordSimulatorSetup.exe`.
-
-If the packaged build is somewhere other than `Packaged\Windows`, pass its location:
-
-```bat
-"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DPackagedDir="D:\path\to\Windows" Installer\LordSimulator.iss
-```
-
-## 6. Install and launch
-
-1. Run `LordSimulatorSetup.exe` on a 64-bit Windows system and accept the administrator prompt.
-2. The application installs to `C:\Program Files\Lord Simulator\`. The installer also installs the Unreal Engine runtime prerequisites silently, and creates the `Lord Simulator` folder in your Documents folder.
-3. Launch `C:\Program Files\Lord Simulator\LordSimulator.exe`.
-
-It can be uninstalled from *Settings → Apps → Installed apps → Lord Simulator*.
-
-## Localization (Spec 006)
-
-The single target is **LordSimulator**, native culture **en**, loading policy
-**Game**. The empty asset-based String Table is
-`Content/Localization/ST_LordSimulator.uasset`, object path and Unreal-assigned
-table ID `/Game/Localization/ST_LordSimulator.ST_LordSimulator`. Use that ID
-with `FText::FromStringTable`, or select the asset in Unreal's text picker.
-Keep `FText` values alive in UI; do not cache their `ToString()` results.
-There are deliberately no placeholder entries or production test translations.
-
-`Config/DefaultGame.ini`, section `[LordSimulator.Localization]`, is the
-authoritative runtime-supported culture configuration. Initially it contains
-only `en`. The dashboard target settings are in `Config/DefaultEditor.ini`;
-standard gather/compile configurations are in `Config/Localization/` and
-resources in `Content/Localization/LordSimulator/`. Commit the String Table,
-target configuration, manifest, culture archives, `.locmeta` and `.locres`
-files together. Resource metadata is checked against the authoritative culture
-configuration at initialization, never used to infer supported cultures.
-
-### Gather, translate and compile
-
-1. Open **Tools → Localization Dashboard → LordSimulator**. Keep the native
-   culture `en` and loading policy **Game**. Open the canonical String Table in
-   the Content Browser to manage entries required by future specifications.
-2. Gather using Unreal's standard `GatherText` commandlet and the checked-in
-   target gather configuration:
-
-   ```bat
-   "%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\LordSimulator.uproject" -run=GatherText -config=Config/Localization/LordSimulator_Gather.ini -unattended
-   ```
-
-   Unreal 5.8's dashboard regenerates an unconditional
-   `ExcludePathFilters=Content/Localization/*` line when its **Gather Text**
-   button is used. That excludes this specification's canonical String Table
-   location. Remove that exclusion from the generated gather configuration
-   before running the command above; retain the `Content/L10N/*` exclusion.
-   The checked-in gather configuration intentionally includes the canonical
-   table. Do not move the asset or introduce a parallel source table.
-3. Use the dashboard's translation editor or standard PO export/import for
-   translations. English source wording and semantic keys must come from a
-   specification. Missing non-native translations use Unreal's native fallback.
-4. Click **Compile Text** on the LordSimulator target, or run:
-
-   ```bat
-   "%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\LordSimulator.uproject" -run=GatherText -config=Config/Localization/LordSimulator_Compile.ini -unattended
-   ```
-
-   Resolve structural/configuration errors and inspect the conflict report.
-   The empty initial target legitimately has zero words.
-
-To add a supported culture, add its exact Unreal identifier to
-`SupportedCultures` in `[LordSimulator.Localization]`, add the same culture to
-the dashboard target, regenerate the standard configurations (checking the
-gather exclusion above), gather and compile. Keep `en` native and supported.
-Update **Project Settings → Packaging → Localizations to Package**
-(`CulturesToStage`) to the same set and select internationalization data
-sufficient for every supported culture. `English` is sufficient only for the
-initial `en` configuration. Rebuild and validate all supported cultures.
-Culture matching is case-sensitive: `pt`, `pt-BR` and `pt-br` are distinct.
-
-### Runtime and startup
-
-`FLordSimulatorLocalization` exposes immutable language metadata, configured
-language, optional active language, validation, startup completion, and
-`ChangeLanguage`. Runtime feature code uses this operation; only it may update
-configured `Language` and game culture together. There are no Blueprint APIs
-or custom text lookup/refresh events. Language changes update in-memory settings
-only; the existing complete-state shutdown persistence saves them later.
-
-Game configuration establishes the `en` language/locale baseline independently
-of Windows language. The module starts at `PostEngineInit`, when the asset
-loading bridge and localization resources are available. Logging initializes
-first, then localization, complete settings loading/validation, LogMode,
-configured language application, settings completion and localization startup
-completion. Any future localization-dependent UI initialization must wait for
-`IsStartupComplete()`. Failure also completes startup and remains non-fatal.
-
-Editor/PIE uses Unreal's game-localization preview; it never changes the editor
-application's global language or locale. Use standalone game execution or the
-packaged game to verify both real language and locale changes and culture-aware
-number/date formatting. Editor preview validates game text resources.
-
-### Automated and packaged validation
-
-After building the editor, run these built-in Unreal C++ tests from the editor
-console, or select **LordSimulator → Localization** in **Session Frontend →
-Automation**:
-
-```text
-Automation RunTests LordSimulator.Localization
-```
-
-For unattended execution:
+Localization-only unattended execution is supported with:
 
 ```bat
 "%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\LordSimulator.uproject" -unattended -nullrhi -ExecCmds="Automation RunTests LordSimulator.Localization" -TestExit="Automation Test Queue Empty" -ReportExportPath="%CD%\Saved\LocalizationTests"
 ```
 
-The tests cover deterministic engine-failure seams, initialization precedence,
-fallback/recovery, exact messages, settings parsing/serialization and complete
-state comparison, actual target/resources/asset configuration, and transient
-localization-aware FText. No test cultures or strings are packaged.
+## 5. Localization workflow
 
-Gather and compile before the Shipping packaging command in section 4. The
-packaging configuration stages native localization resources and English ICU
-data. `/Game/Localization` is explicitly cooked because the empty String Table
-is loaded by a runtime path and has no map/content reference for the cooker's
-dependency graph. Keep the always-cook directory scoped to this canonical asset
-location; there is no second localization resource structure.
+The canonical Unreal Localization Target is **LordSimulator**, with native culture **en** and loading policy **Game**.
 
-Packaging verification is separate from automation:
-
-1. Verify the staged manifest/container includes the canonical String Table,
-   `LordSimulator.locmeta`, every configured culture's `LordSimulator.locres`,
-   and required internationalization data, with no extra game cultures.
-2. Launch `Packaged\Windows\LordSimulator.exe`. Check the Lord Simulator log
-   in the Documents known folder for localization initialization completion and
-   `Language 'en' was applied.`, in the required settings-startup order.
-3. For every configured culture, verify exact support recognition, Unreal
-   native display name, game language and locale activation, packaged resource
-   access, existing FText changing live, native fallback for untranslated
-   existing entries, and return to `en`. Use the framework from a debugger or
-   existing feature call site; do not add test UI, production strings or cultures.
-   The initially empty table has no translated entries to exercise; the
-   transient automated fixture covers FText resolution without adding content.
-4. Verify successful changes persist only through normal shutdown, and editor
-   preview leaves editor language/locale unchanged. Repeat after installing the
-   installer from section 5.
-
-
-Localization application waits for Unreal's asynchronous localization tasks before updating
-active state or reporting startup completion. In the editor, PIE world initialization
-restores the active game preview after Unreal's BeginPIE override, before actor initialization;
-ShutdownPIE restores it after Unreal's EndPIE reset. These restores do not repeat infrastructure
-initialization, alter settings, or emit duplicate success logs. If restoration fails, active
-state becomes unavailable so a later request can recover rather than take a stale no-op.
-Culture identifiers and target metadata are compared case-sensitively.
-
-The localization automation suite also covers casing mismatches, repeated lifecycle restores,
-restoration failure/recovery, and the production editor adapter's asynchronous completion.
-The PIE lifecycle test starts and stops two real sessions with a conflicting editor preview
-setting and checks restoration before actors begin play. Run the suite in an idle editor.
-
-## UI framework (Spec 007)
-
-UMG is the primary authoring system. The checked-in project enables Unreal's
-CommonUI plugin and uses `UCommonGameViewportClient`; no additional installation
-is required. CommonUI supplies activation, stacks, input routing and focus
-restoration where those behaviors are needed. MVVM, Experimental UIFramework,
-CommonUI Enhanced Input integration and an input-action framework are not enabled.
-
-`ULordSimulatorUISubsystem` is the single screen-space UI owner for each local
-player. It creates one `ULordSimulatorPrimaryUILayout` from
-`/Game/UI/Framework/WBP_LordSimulatorPrimaryUILayout`. Root creation waits for
-localization startup completion, including completion after a non-fatal failure.
-Controller/viewport lifecycle callbacks initialize it; world cleanup and local
-player removal release it. `InitializeUI()` is safe to repeat and returns false
-when prerequisites or the root asset are unavailable. Check `IsUIAvailable()`
-before feature work that requires UI.
-
-Derive ordinary widgets from `ULordSimulatorUserWidget` (`UCommonUserWidget`).
-Use `ULordSimulatorActivatableWidget` (`UCommonActivatableWidget`) for screens
-needing activation and CommonUI focus/input behavior. The primary layout derives
-from the activatable base. Neither base polls gameplay data.
-
-Use the local player's subsystem in C++ or Blueprint to attach production
-screen-space widgets. `AddWidget(Layer, WidgetClass)` returns the new instance
-or null; for Menu/Modal it pushes a screen. `RemoveWidget(Layer, Widget)` removes
-that instance and `PopWidget(Layer)` removes the active Menu/Modal screen. Invalid
-classes, layers, missing roots and unrelated removals fail safely. Feature code
-must not call `AddToViewport`/`AddToPlayerScreen` or manipulate root internals.
-World-space `UWidgetComponent` UI is outside this ownership/input system.
-
-The root fills its player's viewport and contains exactly these layers, in
-ascending visual order:
-
-| Layer | Behavior |
-|---|---|
-| `Game` | Multiple ordinary or activatable widgets; combined game/UI input baseline. |
-| `Menu` | Activatable stack; only its top is displayed/active, with menu input blocking world commands. |
-| `Modal` | Activatable stack above Menu; blocks lower UI and world commands. |
-| `PassiveOverlay` | Multiple ordinary or activatable widgets; self and descendants are hit-test transparent, with no activation focus/input mode. |
-
-Closing a screen restores the underlying CommonUI state without reconstructing
-unrelated UI. CommonUI owns focus restoration; feature screens may provide their
-desired focus target. No layer changes simulation pause or time. Layer routing
-preserves widget enabled state: input blocking does not impose disabled visual
-styling on passive content or on Game/Menu behind a modal. The empty root
-contains no production text, art, HUD or menu. Keep screen-space content under
-`/Game/UI`, with shared technical infrastructure under `/Game/UI/Framework`.
-That framework directory is explicitly cooked because the root loads by path.
-
-Gameplay/simulation systems remain authoritative. Subscribe to their delegates,
-events or explicit update calls, and unbind when a widget stops observing them.
-Send gameplay commands through explicit system interfaces. Widgets may retain
-ephemeral presentation state such as a selected tab or scroll position. Do not
-use raw per-frame UMG bindings, Tick/OnPaint polling, repeated world searches,
-custom MVVM or a second event bus to synchronize gameplay values. Preserve `FText`
-and localization-aware formatting throughout the UI lifetime.
-
-Use Unreal's virtualized `UListView`, `UTileView`, `UTreeView` or suitable CommonUI
-equivalents for future large collections. Do not instantiate hundreds of off-screen
-entries. Apply invalidation, retainers or volatility only for a demonstrated need;
-standard Widget Reflector and Slate Insights remain available for diagnosis.
-
-### UI verification
-
-Build the editor, open an idle editor with no PIE session, and run:
+The canonical asset-based String Table is:
 
 ```text
-Automation RunTests LordSimulator.
+Content/Localization/ST_LordSimulator.uasset
+/Game/Localization/ST_LordSimulator.ST_LordSimulator
 ```
 
-This runs localization regressions and `LordSimulator.UI.Framework`. To run only
-UI, use `Automation RunTests LordSimulator.UI`. The UI test starts PIE and uses
-the actual root asset, viewport and CommonUI action router. It checks ownership,
-repeat initialization, two local players, cleanup, layer validation, stack
-restoration, passive transparency, localization gating and routed input modes.
-It arranges all four layers at 1280x720, 1920x1080, 2560x1440, 3440x1440 and
-3840x2160, at DPI scales 1.0 and 1.5. Allow Slate to render; do not use `-nullrhi`
-for the UI suite. Test widgets live in the editor-only `LordSimulatorTests`
-module and are excluded from Shipping.
+Use the Unreal-assigned table ID with `FText::FromStringTable`, or select the String Table asset in Unreal's text picker. Keep player-facing text as `FText` throughout its UI lifetime.
 
-Build `LordSimulator Win64 Shipping` with the same Build.bat command used for
-the editor, replacing target/configuration, then package using section 4.
-Inspect the staged/container manifest for the canonical root and required
-CommonUI resources, and confirm no `LordSimulatorTests` fixtures are staged.
-Launch `Packaged\Windows\LordSimulator.exe`; the technical root must add no
-visible placeholder text or art. With native symbols and a debugger, verify
-the primary local player's `ULordSimulatorUISubsystem` has exactly one attached
-`PrimaryLayout`, and repeated initialization retains that same instance.
-Repeat the packaged smoke check after producing/installing section 5's installer.
+The production table currently contains these main-menu entries:
+
+| Key | Native English source |
+|---|---|
+| `MainMenu.NewGame` | `NEW GAME` |
+| `MainMenu.LoadGame` | `LOAD GAME` |
+| `MainMenu.Settings` | `SETTINGS` |
+| `MainMenu.Quit` | `QUIT` |
+
+Do not add placeholder or test-only production entries.
+
+`Config/DefaultGame.ini`, section `[LordSimulator.Localization]`, is authoritative for runtime-supported cultures. The initial supported set is only `en`. Localization Dashboard target settings are in `Config/DefaultEditor.ini`; gather/compile configurations are in `Config/Localization/`; generated resources are in `Content/Localization/LordSimulator/`.
+
+### Gather and compile
+
+Open **Tools → Localization Dashboard → LordSimulator** to manage the target. Keep native culture `en` and loading policy **Game**.
+
+Gather:
+
+```bat
+"%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\LordSimulator.uproject" -run=GatherText -config=Config/Localization/LordSimulator_Gather.ini -unattended
+```
+
+Unreal 5.8's dashboard may regenerate an unconditional `ExcludePathFilters=Content/Localization/*` entry when using its **Gather Text** button. That would exclude the canonical String Table. Remove that exclusion before gathering while retaining the `Content/L10N/*` exclusion. The checked-in gather configuration intentionally includes the canonical table.
+
+Compile:
+
+```bat
+"%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\LordSimulator.uproject" -run=GatherText -config=Config/Localization/LordSimulator_Compile.ini -unattended
+```
+
+Commit the String Table, target configuration, manifest, culture archives, `.locmeta`, and `.locres` resources together whenever localization content changes.
+
+To add a supported culture, add its exact Unreal identifier to `SupportedCultures` in `[LordSimulator.Localization]`, add the same culture to the Localization Dashboard target, gather and compile, and update **Project Settings → Packaging → Localizations to Package** (`CulturesToStage`) to the same supported set. Keep `en` native and supported. Culture identifiers are case-sensitive.
+
+### Runtime/startup localization
+
+Game configuration establishes `en` as the baseline independently of Windows language. Lord Simulator initializes localization, loads/validates settings, applies the configured language, and marks localization startup complete before localization-dependent production UI is initialized. Localization failure is non-fatal and still completes the localization startup phase.
+
+Editor/PIE uses Unreal game-localization preview behavior and must not change the Unreal Editor application's own language/locale. Use standalone or packaged execution for real application-wide language/locale verification.
+
+## 6. UI framework
+
+UMG is the primary authoring system. The project enables Unreal CommonUI and uses `UCommonGameViewportClient`.
+
+`ULordSimulatorUISubsystem` is the authoritative screen-space UI owner for each local player. It creates one `ULordSimulatorPrimaryUILayout` from:
+
+```text
+/Game/UI/Framework/WBP_LordSimulatorPrimaryUILayout
+```
+
+The root exposes the canonical layers `Game`, `Menu`, `Modal`, and `PassiveOverlay`. Production screen-space widgets enter through these layers; feature code must not establish competing viewport roots.
+
+Root creation waits for localization startup completion and for required local-player/viewport prerequisites. Repeated initialization is idempotent.
+
+### Production main menu
+
+After localization startup is complete and the primary local-player UI root is available, startup presents exactly one production main-menu screen on the canonical `Menu` layer:
+
+```text
+/Game/UI/Screens/MainMenu/WBP_MainMenu
+```
+
+Repeated startup/UI initialization must not create duplicate main-menu instances.
+
+The menu uses the canonical Lord Simulator String Table entries above. `NEW GAME`, `LOAD GAME`, and `SETTINGS` are currently visible but disabled/non-focusable. `QUIT` is enabled, receives initial focus, and performs normal Unreal quit behavior. In PIE it ends PIE without closing the editor; in a packaged build it closes the application.
+
+Main-menu production textures live under:
+
+```text
+/Game/UI/Textures/MainMenu
+```
+
+The technical primary root itself remains free of feature-specific presentation; the main menu is a production screen attached through the `Menu` layer.
+
+## 7. Produce the Windows x64 Shipping package
+
+Close Unreal Editor and any running Lord Simulator executable before building so Live Coding does not block UnrealBuildTool.
+
+Optional explicit Shipping build verification:
+
+```bat
+"%UE_ROOT%\Engine\Build\BatchFiles\Build.bat" LordSimulator Win64 Shipping -Project="%CD%\LordSimulator.uproject" -WaitMutex
+```
+
+Gather/compile localization before packaging when localization content has changed, then run:
+
+```bat
+"%UE_ROOT%\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun -project="%CD%\LordSimulator.uproject" -platform=Win64 -clientconfig=Shipping -build -cook -stage -pak -prereqs -archive -archivedirectory="%CD%\Packaged" -noP4 -utf8output
+```
+
+The packaged build is written to `Packaged\Windows\` and contains `LordSimulator.exe` plus the Unreal prerequisites installer.
+
+Packaging must include the canonical localization resources/String Table, the primary UI root, the production main-menu Widget Blueprint, and the main-menu textures. Editor-only `LordSimulatorTests` fixtures must not be staged.
+
+### Packaged smoke verification
+
+Launch:
+
+```bat
+Packaged\Windows\LordSimulator.exe
+```
+
+Verify that:
+
+1. the production main menu appears once at startup;
+2. its background and button states render correctly;
+3. `NEW GAME`, `LOAD GAME`, and `SETTINGS` remain disabled;
+4. `QUIT` responds to normal/hover/pressed states and closes the packaged process normally;
+5. `Documents\Lord Simulator\log.log` contains the expected startup localization sequence and `Application shutdown started.` after normal Quit.
+
+## 8. Produce the installer
+
+```bat
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" Installer\LordSimulator.iss
+```
+
+The installer is written to:
+
+```text
+Installer\Output\LordSimulatorSetup.exe
+```
+
+If the packaged build is elsewhere:
+
+```bat
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DPackagedDir="D:\path\to\Windows" Installer\LordSimulator.iss
+```
+
+## 9. Install and launch
+
+1. Run `LordSimulatorSetup.exe` on a supported 64-bit Windows system and accept the administrator prompt.
+2. The application installs to `C:\Program Files\Lord Simulator\` and creates the `Lord Simulator` folder under the current user's Documents known folder.
+3. Launch `C:\Program Files\Lord Simulator\LordSimulator.exe`.
+4. Repeat the packaged smoke verification against the installed build.
+
+The application can be uninstalled from **Settings → Apps → Installed apps → Lord Simulator**.
