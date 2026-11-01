@@ -1,6 +1,6 @@
 #include "UI/LordSimulatorMainMenuWidget.h"
 
-#include "Components/Button.h"
+#include "UI/LordSimulatorMainMenuButton.h"
 #include "Components/TextBlock.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -79,12 +79,12 @@ void ULordSimulatorMainMenuWidget::NativeOnRemovedFromFocusPath(const FFocusEven
 	UpdateQuitPresentation();
 }
 
-void ULordSimulatorMainMenuWidget::ConfigureButton(UButton* Button, bool bEnabled, bool bFocusable)
+void ULordSimulatorMainMenuWidget::ConfigureButton(ULordSimulatorMainMenuButton* Button, bool bEnabled, bool bFocusable)
 {
 	if (!Button) return;
+	Button->InitializeFocusability(bFocusable);
 	Button->SetStyle(MainMenuButtonStyle);
 	Button->SetIsEnabled(bEnabled);
-	Button->IsFocusable = bFocusable;
 }
 
 void ULordSimulatorMainMenuWidget::ConfigureLabel(UTextBlock* Label, const TCHAR* StringTableKey, const FLinearColor& Color)
