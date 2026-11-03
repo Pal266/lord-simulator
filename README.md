@@ -94,18 +94,18 @@ Content/Localization/ST_LordSimulator.uasset
 
 Use the Unreal-assigned table ID with `FText::FromStringTable`, or select the String Table asset in Unreal's text picker. Keep player-facing text as `FText` throughout its UI lifetime.
 
-The production table currently contains these main-menu entries:
+The production table currently contains these main-menu entries, with their production translations:
 
-| Key | Native English source |
-|---|---|
-| `MainMenu.NewGame` | `NEW GAME` |
-| `MainMenu.LoadGame` | `LOAD GAME` |
-| `MainMenu.Settings` | `SETTINGS` |
-| `MainMenu.Quit` | `QUIT` |
+| Key | Native English source `en` | Czech `cs` | Ukrainian `uk` |
+|---|---|---|---|
+| `MainMenu.NewGame` | `NEW GAME` | `NOVÁ HRA` | `НОВА ГРА` |
+| `MainMenu.LoadGame` | `LOAD GAME` | `NAČÍST` | `ЗАВАНТАЖИТИ` |
+| `MainMenu.Settings` | `SETTINGS` | `NASTAVENÍ` | `ПАРАМЕТРИ` |
+| `MainMenu.Quit` | `QUIT` | `UKONČIT` | `ВИЙТИ` |
 
 Do not add placeholder or test-only production entries.
 
-`Config/DefaultGame.ini`, section `[LordSimulator.Localization]`, is authoritative for runtime-supported cultures. The initial supported set is only `en`. Localization Dashboard target settings are in `Config/DefaultEditor.ini`; gather/compile configurations are in `Config/Localization/`; generated resources are in `Content/Localization/LordSimulator/`.
+`Config/DefaultGame.ini`, section `[LordSimulator.Localization]`, is authoritative for runtime-supported cultures. The production-supported set is exactly `en`, `cs`, and `uk`. Localization Dashboard target settings are in `Config/DefaultEditor.ini`; gather/compile configurations are in `Config/Localization/`; generated resources are in `Content/Localization/LordSimulator/`.
 
 ### Gather and compile
 
@@ -125,9 +125,11 @@ Compile:
 "%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\LordSimulator.uproject" -run=GatherText -config=Config/Localization/LordSimulator_Compile.ini -unattended
 ```
 
+Translations are stored in the culture archives (`Content/Localization/LordSimulator/<culture>/LordSimulator.archive`). Edit them with **Localization Dashboard → LordSimulator → Edit Translations** for the culture, save, then compile. Never change native English source text when editing translations.
+
 Commit the String Table, target configuration, manifest, culture archives, `.locmeta`, and `.locres` resources together whenever localization content changes.
 
-To add a supported culture, add its exact Unreal identifier to `SupportedCultures` in `[LordSimulator.Localization]`, add the same culture to the Localization Dashboard target, gather and compile, and update **Project Settings → Packaging → Localizations to Package** (`CulturesToStage`) to the same supported set. Keep `en` native and supported. Culture identifiers are case-sensitive.
+To add a supported culture, add its exact Unreal identifier to `SupportedCultures` in `[LordSimulator.Localization]`, add the same culture to the Localization Dashboard target, gather and compile, and update **Project Settings → Packaging → Localizations to Package** (`CulturesToStage`) to the same supported set. **Project Settings → Packaging → Internationalization Support** (`InternationalizationPreset`) must include ICU data for every supported culture; Czech and Ukrainian require `All`. Keep `en` native and supported. Culture identifiers are case-sensitive.
 
 ### Runtime/startup localization
 
@@ -204,6 +206,27 @@ Verify that:
 3. `NEW GAME`, `LOAD GAME`, and `SETTINGS` remain disabled;
 4. `QUIT` responds to normal/hover/pressed states and closes the packaged process normally;
 5. `Documents\Lord Simulator\log.log` contains the expected startup localization sequence and `Application shutdown started.` after normal Quit.
+
+### Packaged localization verification
+
+Check every supported culture (`en`, `cs`, `uk`) in the packaged build. Before each run, close the game and set `Language=<culture>` in `Documents\Lord Simulator\settings.ini` under `[Settings]`. For each culture, launch at each viewport size `1280x720`, `1920x1080`, `2560x1440`, `3440x1440`, and `3840x2160`, for example:
+
+```bat
+Packaged\Windows\LordSimulator.exe -windowed -ResX=1280 -ResY=720
+```
+
+At each size verify that:
+
+1. `log.log` contains `Language '<culture>' was applied.` (no fallback or unavailable message);
+2. the main menu shows the exact labels from the table in section 5, with Czech diacritics and Ukrainian Cyrillic rendered correctly;
+3. every label is readable, aligned as in English, and fully contained by its button;
+4. button states and `QUIT` behavior match the packaged smoke verification.
+
+The packaged build stores localization resources in its `.pak` file. Confirm that `LordSimulator.locres` is present for `en`, `cs`, and `uk`:
+
+```bat
+"%UE_ROOT%\Engine\Binaries\Win64\UnrealPak.exe" "%CD%\Packaged\Windows\LordSimulator\Content\Paks\LordSimulator-Windows.pak" -List | findstr /i "LordSimulator.locres"
+```
 
 ## 8. Produce the installer
 

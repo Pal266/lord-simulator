@@ -167,7 +167,7 @@ bool FLordLocalizationProjectTest::RunTest(const FString&)
 {
 	TArray<FString> Configured;
 	GConfig->GetArray(TEXT("LordSimulator.Localization"), TEXT("SupportedCultures"), Configured, GGameIni);
-	TestTrue(TEXT("Production contains only en"), Configured == TArray<FString>{TEXT("en")});
+	TestTrue(TEXT("Production contains exactly en, cs and uk"), LordSimulatorLocalization::FState::SameCultures(Configured, {TEXT("en"), TEXT("cs"), TEXT("uk")}));
 #if WITH_EDITOR
 	const ULocalizationTargetSet* Targets = ULocalizationSettings::GetGameTargetSet();
 	TestEqual(TEXT("One canonical target"), Targets->TargetObjects.Num(), 1);
@@ -187,8 +187,10 @@ bool FLordLocalizationProjectTest::RunTest(const FString&)
 	TestTrue(TEXT("Framework resource initialization"), FLordSimulatorLocalization::Initialize());
 	TestTrue(TEXT("Startup completion"), FLordSimulatorLocalization::IsStartupComplete());
 	const auto& Languages = FLordSimulatorLocalization::GetSupportedLanguages();
-	TestEqual(TEXT("One production language"), Languages.Num(), 1);
-	if (Languages.Num()) TestEqual(TEXT("Unreal native name"), Languages[0].NativeDisplayName, FString(TEXT("English")));
+	TestEqual(TEXT("Three production languages"), Languages.Num(), 3);
+	const FLordSimulatorLanguage* English = Languages.FindByPredicate([](const FLordSimulatorLanguage& Entry) { return Entry.Culture.Equals(TEXT("en"), ESearchCase::CaseSensitive); });
+	TestNotNull(TEXT("English discovered"), English);
+	if (English) TestEqual(TEXT("Unreal native name"), English->NativeDisplayName, FString(TEXT("English")));
 	const UStringTable* Table = LoadObject<UStringTable>(nullptr, TEXT("/Game/Localization/ST_LordSimulator.ST_LordSimulator"));
 	TestNotNull(TEXT("Asset table"), Table);
 	if (Table)
@@ -384,6 +386,64 @@ bool FLordLocalizationPIETest::RunTest(const FString&)
 			GConfig->RemoveKey(TEXT("Internationalization"), TEXT("PreviewGameLanguage"), GEditorPerProjectIni);
 		return true;
 	}));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLordLocalizationCzechUkrainianTest, "LordSimulator.Localization.CzechUkrainian", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FLordLocalizationCzechUkrainianTest::RunTest(const FString&)
+{
+	using namespace LordSimulatorLocalization;
+	TestTrue(TEXT("Framework initialization"), FLordSimulatorLocalization::Initialize());
+	TArray<FString> Discovered;
+	for (const FLordSimulatorLanguage& Language : FLordSimulatorLocalization::GetSupportedLanguages()) Discovered.Add(Language.Culture);
+	TestTrue(TEXT("Discovery returns exactly en, cs and uk"), FState::SameCultures(Discovered, {TEXT("en"), TEXT("cs"), TEXT("uk")}));
+	TestTrue(TEXT("cs supported"), FLordSimulatorLocalization::IsSupported(TEXT("cs")));
+	TestTrue(TEXT("uk supported"), FLordSimulatorLocalization::IsSupported(TEXT("uk")));
+
+	const UStringTable* Table = LoadObject<UStringTable>(nullptr, TEXT("/Game/Localization/ST_LordSimulator.ST_LordSimulator"));
+	TestNotNull(TEXT("Asset table"), Table);
+	if (!Table) return false;
+	const FName TableId = Table->GetStringTableId();
+	const TCHAR* Keys[] = {TEXT("MainMenu.NewGame"), TEXT("MainMenu.LoadGame"), TEXT("MainMenu.Settings"), TEXT("MainMenu.Quit")};
+	TArray<FText> Labels;
+	for (const TCHAR* Key : Keys) Labels.Add(FText::FromStringTable(TableId, Key));
+	const TMap<FString, TArray<FString>> Expected = {
+		{TEXT("en"), {TEXT("NEW GAME"), TEXT("LOAD GAME"), TEXT("SETTINGS"), TEXT("QUIT")}},
+		{TEXT("cs"), {TEXT("NOV\u00C1 HRA"), TEXT("NA\u010C\u00CDST"), TEXT("NASTAVEN\u00CD"), TEXT("UKON\u010CIT")}},
+		{TEXT("uk"), {TEXT("\u041D\u041E\u0412\u0410 \u0413\u0420\u0410"), TEXT("\u0417\u0410\u0412\u0410\u041D\u0422\u0410\u0416\u0418\u0422\u0418"), TEXT("\u041F\u0410\u0420\u0410\u041C\u0415\u0422\u0420\u0418"), TEXT("\u0412\u0418\u0419\u0422\u0418")}}};
+	auto CheckLabels = [&](const FString& Culture)
+	{
+		for (int32 Index = 0; Index < Labels.Num(); ++Index)
+			TestEqual(FString::Printf(TEXT("%s %s"), *Culture, Keys[Index]), Labels[Index].ToString(), Expected.FindChecked(Culture)[Index]);
+	};
+
+	// Production state machine and Unreal application adapter with in-memory settings,
+	// so the test never mutates the application's settings or project log.
+	for (const FString& Startup : {FString(TEXT("cs")), FString(TEXT("uk"))})
+	{
+		FString Configured = Startup;
+		TArray<FString> Logs;
+		FState State({
+			[](TArray<FLordSimulatorLanguage>& Out) { Out = FLordSimulatorLocalization::GetSupportedLanguages(); return true; },
+			[] { return true; }, ApplyCulture,
+			[&] { return Configured; }, [&](const FString& Culture) { Configured = Culture; },
+			[&](const FString& Message) { Logs.Add(Message); }});
+		TestTrue(TEXT("State initialization"), State.Initialize());
+		TestTrue(FString::Printf(TEXT("Language=%s is a valid setting"), *Startup), State.IsValidSetting(Startup));
+		State.ApplyStartup();
+		State.CompleteStartup();
+		TestTrue(FString::Printf(TEXT("Language=%s activates at startup"), *Startup), State.GetActive().IsSet() && State.GetActive().GetValue() == Startup);
+		TestEqual(TEXT("Startup applied log"), Logs.Last(), FString::Printf(TEXT("Language '%s' was applied."), *Startup));
+		CheckLabels(Startup);
+		for (const FString& Runtime : {FString(TEXT("en")), FString(TEXT("cs")), FString(TEXT("uk")), FString(TEXT("en"))})
+		{
+			TestTrue(FString::Printf(TEXT("Runtime change to %s"), *Runtime), State.Change(Runtime));
+			TestEqual(TEXT("Runtime active"), State.GetActive().Get(FString()), Runtime);
+			TestEqual(TEXT("Runtime configured"), Configured, Runtime);
+			CheckLabels(Runtime);
+		}
+	}
+	FLordSimulatorLocalization::ReapplyActiveLanguage();
 	return true;
 }
 #endif
