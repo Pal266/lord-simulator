@@ -388,8 +388,7 @@ bool FLordLocalizationPIETest::RunTest(const FString&)
 	}));
 	return true;
 }
-#endif
-#if WITH_EDITOR
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLordLocalizationCzechUkrainianTest, "LordSimulator.Localization.CzechUkrainian", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FLordLocalizationCzechUkrainianTest::RunTest(const FString&)
 {
@@ -410,8 +409,8 @@ bool FLordLocalizationCzechUkrainianTest::RunTest(const FString&)
 	for (const TCHAR* Key : Keys) Labels.Add(FText::FromStringTable(TableId, Key));
 	const TMap<FString, TArray<FString>> Expected = {
 		{TEXT("en"), {TEXT("NEW GAME"), TEXT("LOAD GAME"), TEXT("SETTINGS"), TEXT("QUIT")}},
-		{TEXT("cs"), {TEXT("NOV\u00C1 HRA"), TEXT("NA\u010C\u00CDST HRU"), TEXT("NASTAVEN\u00CD"), TEXT("UKON\u010CIT")}},
-		{TEXT("uk"), {TEXT("\u041D\u041E\u0412\u0410 \u0413\u0420\u0410"), TEXT("\u0417\u0410\u0412\u0410\u041D\u0422\u0410\u0416\u0418\u0422\u0418 \u0413\u0420\u0423"), TEXT("\u041D\u0410\u041B\u0410\u0428\u0422\u0423\u0412\u0410\u041D\u041D\u042F"), TEXT("\u0412\u0418\u0419\u0422\u0418")}}};
+		{TEXT("cs"), {TEXT("NOV\u00C1 HRA"), TEXT("NA\u010C\u00CDST"), TEXT("NASTAVEN\u00CD"), TEXT("UKON\u010CIT")}},
+		{TEXT("uk"), {TEXT("\u041D\u041E\u0412\u0410 \u0413\u0420\u0410"), TEXT("\u0417\u0410\u0412\u0410\u041D\u0422\u0410\u0416\u0418\u0422\u0418"), TEXT("\u041F\u0410\u0420\u0410\u041C\u0415\u0422\u0420\u0418"), TEXT("\u0412\u0418\u0419\u0422\u0418")}}};
 	auto CheckLabels = [&](const FString& Culture)
 	{
 		for (int32 Index = 0; Index < Labels.Num(); ++Index)

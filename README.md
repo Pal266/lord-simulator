@@ -99,8 +99,8 @@ The production table currently contains these main-menu entries, with their prod
 | Key | Native English source `en` | Czech `cs` | Ukrainian `uk` |
 |---|---|---|---|
 | `MainMenu.NewGame` | `NEW GAME` | `NOVÁ HRA` | `НОВА ГРА` |
-| `MainMenu.LoadGame` | `LOAD GAME` | `NAČÍST HRU` | `ЗАВАНТАЖИТИ ГРУ` |
-| `MainMenu.Settings` | `SETTINGS` | `NASTAVENÍ` | `НАЛАШТУВАННЯ` |
+| `MainMenu.LoadGame` | `LOAD GAME` | `NAČÍST` | `ЗАВАНТАЖИТИ` |
+| `MainMenu.Settings` | `SETTINGS` | `NASTAVENÍ` | `ПАРАМЕТРИ` |
 | `MainMenu.Quit` | `QUIT` | `UKONČIT` | `ВИЙТИ` |
 
 Do not add placeholder or test-only production entries.
@@ -222,13 +222,11 @@ At each size verify that:
 3. every label is readable, aligned as in English, and fully contained by its button;
 4. button states and `QUIT` behavior match the packaged smoke verification.
 
-Packaged localization resources must exist for each culture:
+The packaged build stores localization resources in its `.pak` file. Confirm that `LordSimulator.locres` is present for `en`, `cs`, and `uk`:
 
-```text
-Packaged\Windows\LordSimulator\Content\Localization\LordSimulator\{en,cs,uk}\LordSimulator.locres
+```bat
+"%UE_ROOT%\Engine\Binaries\Win64\UnrealPak.exe" "%CD%\Packaged\Windows\LordSimulator\Content\Paks\LordSimulator-Windows.pak" -List | findstr /i "LordSimulator.locres"
 ```
-
-When the build uses `.pak` files, confirm their presence with `UnrealPak.exe <pak> -List` instead.
 
 ## 8. Produce the installer
 
