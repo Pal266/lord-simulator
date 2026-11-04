@@ -71,7 +71,7 @@ Game mode:
 
 Open an idle Unreal Editor session and use **Tools → Session Frontend → Automation**. Run the top-level `LordSimulator` test group.
 
-The suite includes localization regressions, `LordSimulator.UI.Framework`, and `LordSimulator.UI.MainMenu`.
+The suite includes `LordSimulator.Settings.StartupDisplay`, localization regressions, `LordSimulator.UI.Framework`, and `LordSimulator.UI.MainMenu`.
 
 The UI tests start PIE and require Slate/viewport rendering; do not use `-nullrhi` for the complete UI suite.
 
@@ -207,13 +207,23 @@ Verify that:
 4. `QUIT` responds to normal/hover/pressed states and closes the packaged process normally;
 5. `Documents\Lord Simulator\log.log` contains the expected startup localization sequence and `Application shutdown started.` after normal Quit.
 
+### Packaged display verification
+
+Before each launch, close the game and edit the three display entries under `[Settings]` in `Documents\Lord Simulator\settings.ini`. Use a numeric pair supported by the startup monitor.
+
+| Width and height | Fullscreen | Expected startup |
+|---|---|---|
+| `auto` and `auto` | `1` | Current screen resolution in fullscreen |
+| Supported numeric pair | `1` | Exact requested resolution in fullscreen |
+| Supported numeric pair | `0` | Exact requested resolution in a window |
+| `auto` and a numeric height | `0` | Current screen resolution in a window |
+| `0` and a numeric height | `1` | Current screen resolution in fullscreen |
+
+Confirm that the main menu remains operational. Check `log.log` for one resolution rejection in each of the last two cases and zero in the first three. The rejection message includes the configured pair. Quit normally between cases so the settings file can be updated through the normal shutdown lifecycle.
+
 ### Packaged localization verification
 
-Check every supported culture (`en`, `cs`, `uk`) in the packaged build. Before each run, close the game and set `Language=<culture>` in `Documents\Lord Simulator\settings.ini` under `[Settings]`. For each culture, launch at each viewport size `1280x720`, `1920x1080`, `2560x1440`, `3440x1440`, and `3840x2160`, for example:
-
-```bat
-Packaged\Windows\LordSimulator.exe -windowed -ResX=1280 -ResY=720
-```
+Check every supported culture (`en`, `cs`, `uk`) in the packaged build. Before each run, close the game and set `Language=<culture>` in `Documents\Lord Simulator\settings.ini` under `[Settings]`. For each culture, set `Fullscreen=0` and set `Width` and `Height` to each supported test size in turn (`1280x720`, `1920x1080`, `2560x1440`, `3440x1440`, and `3840x2160`). Use a monitor large enough for the requested sizes. Launch the packaged game after each edit.
 
 At each size verify that:
 
