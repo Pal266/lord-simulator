@@ -71,6 +71,8 @@ namespace LordSimulatorSettings
 		TFunctionRef<FIntPoint()> Detect, TFunctionRef<bool(FIntPoint, bool)> IsAvailable,
 		TFunctionRef<bool(FIntPoint, bool)> Apply, TFunctionRef<void(const FString&)> LogRejection)
 	{
+		// Capture the startup mode before a failed explicit request can change it.
+		const FIntPoint Detected = Detect();
 		if (!IsAutomatic(Input))
 		{
 			FIntPoint Requested;
@@ -86,7 +88,6 @@ namespace LordSimulatorSettings
 			Data.Height = TEXT("auto");
 		}
 
-		const FIntPoint Detected = Detect();
 		if (Detected.X > 0 && Detected.Y > 0)
 		{
 			Apply(Detected, Data.bFullscreen);
@@ -446,6 +447,8 @@ void FLordSimulatorSettings::ApplyStartupDisplay()
 		{
 			const EWindowMode::Type Mode = bFullscreen ? EWindowMode::Fullscreen : EWindowMode::Windowed;
 			FSystemResolution::RequestResolutionChange(Resolution.X, Resolution.Y, Mode);
+			// The resolution sink calls ResizeFrame inline. On Windows this reshapes the native
+			// window and updates the scene viewport size before the sink returns.
 			IConsoleManager::Get().CallAllConsoleVariableSinks();
 			RECT Client = {};
 			return GetClientRect(Handle, &Client)
@@ -549,10 +552,11 @@ bool FLordDisplaySettingsTest::RunTest(const FString&)
 	{
 		FReadSettings Read = Parse(FString::Printf(TEXT("[Settings]\nWidth=%s\nHeight=%s\nFullscreen=%s\n"), Width, Height, Fullscreen));
 		int32 Detections = 0;
+		FIntPoint CurrentDesktop = Desktop;
 		TArray<FIntPoint> Attempts;
 		TArray<FString> Logs;
 		ApplyDisplay(Read.Data, Read.Display,
-			[&]() { ++Detections; return Desktop; },
+			[&]() { ++Detections; return CurrentDesktop; },
 			[&](FIntPoint Resolution, bool bMode)
 			{
 				return bMode ? bAvailable : FitsWindowedResolution(Resolution, bAvailable ? Desktop : FIntPoint::ZeroValue);
@@ -561,11 +565,17 @@ bool FLordDisplaySettingsTest::RunTest(const FString&)
 			{
 				TestEqual(TEXT("Applied fullscreen mode"), bMode, bFullscreen);
 				Attempts.Add(Resolution);
-				return Resolution == Desktop || bApplicationSucceeds;
+				if (Resolution == Explicit && !bApplicationSucceeds)
+				{
+					// Simulate a partial transition that changes the desktop before failing.
+					CurrentDesktop = Explicit;
+					return false;
+				}
+				return true;
 			},
 			[&](const FString& Message) { Logs.Add(Message); });
 
-		TestEqual(TEXT("Detection count"), Detections, bAutomatic ? 1 : 0);
+		TestEqual(TEXT("Detection count"), Detections, 1);
 		if (TestTrue(TEXT("A resolution was applied"), !Attempts.IsEmpty()))
 		{
 			TestEqual(TEXT("Final applied resolution"), Attempts.Last(), bAutomatic ? Desktop : Explicit);
