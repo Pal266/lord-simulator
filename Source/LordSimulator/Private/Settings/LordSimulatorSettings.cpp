@@ -16,10 +16,6 @@
 #if PLATFORM_WINDOWS
 #include "Windows/WindowsHWrapper.h"
 #endif
-#include "HAL/PlatformProcess.h"
-#include "Misc/FileHelper.h"
-#include "Misc/Paths.h"
-#include "Templates/UniquePtr.h"
 
 namespace LordSimulatorSettings
 {
@@ -64,6 +60,11 @@ namespace LordSimulatorSettings
 	bool GetExplicitResolution(const FDisplayInput& Input, FIntPoint& Out)
 	{
 		return !Input.bDuplicateDimension && ParseDimension(Input.Width, Out.X) && ParseDimension(Input.Height, Out.Y);
+	}
+
+	bool FitsWindowedResolution(FIntPoint Resolution, FIntPoint Desktop)
+	{
+		return Resolution.X <= Desktop.X && Resolution.Y <= Desktop.Y;
 	}
 
 	void ApplyDisplay(FLordSimulatorSettingsData& Data, const FDisplayInput& Input,
@@ -382,6 +383,7 @@ void FLordSimulatorSettings::ApplyStartupDisplay()
 		return;
 	}
 
+	// UGameEngine::Init attaches the game window and viewport before PostEngineInit modules load.
 	const TSharedPtr<SWindow> Window = GEngine->GameViewport->GetWindow();
 	if (!Window || !Window->GetNativeWindow())
 	{
@@ -395,14 +397,24 @@ void FLordSimulatorSettings::ApplyStartupDisplay()
 	const bool bHasMonitor = GetMonitorInfoW(Monitor, reinterpret_cast<MONITORINFO*>(&MonitorInfo)) != 0;
 	const wchar_t* Device = bHasMonitor ? MonitorInfo.szDevice : nullptr;
 
-	ApplyDisplay(Current, StartupDisplay,
-		[Device, &MonitorInfo, bHasMonitor]()
+	const auto QueryDesktop = [Device]()
+	{
+		DEVMODEW Mode = {};
+		Mode.dmSize = sizeof(Mode);
+		if (EnumDisplaySettingsW(Device, ENUM_CURRENT_SETTINGS, &Mode))
 		{
-			DEVMODEW Mode = {};
-			Mode.dmSize = sizeof(Mode);
-			if (EnumDisplaySettingsW(Device, ENUM_CURRENT_SETTINGS, &Mode))
+			return FIntPoint(Mode.dmPelsWidth, Mode.dmPelsHeight);
+		}
+		return FIntPoint::ZeroValue;
+	};
+
+	ApplyDisplay(Current, StartupDisplay,
+		[&QueryDesktop, &MonitorInfo, bHasMonitor]()
+		{
+			const FIntPoint Desktop = QueryDesktop();
+			if (Desktop.X > 0 && Desktop.Y > 0)
 			{
-				return FIntPoint(Mode.dmPelsWidth, Mode.dmPelsHeight);
+				return Desktop;
 			}
 			if (bHasMonitor)
 			{
@@ -411,15 +423,11 @@ void FLordSimulatorSettings::ApplyStartupDisplay()
 			}
 			return FIntPoint::ZeroValue;
 		},
-		[Device](FIntPoint Resolution, bool bFullscreen)
+		[Device, &QueryDesktop](FIntPoint Resolution, bool bFullscreen)
 		{
 			if (!bFullscreen)
 			{
-				DEVMODEW Desktop = {};
-				Desktop.dmSize = sizeof(Desktop);
-				return !EnumDisplaySettingsW(Device, ENUM_CURRENT_SETTINGS, &Desktop)
-					|| (static_cast<DWORD>(Resolution.X) <= Desktop.dmPelsWidth
-						&& static_cast<DWORD>(Resolution.Y) <= Desktop.dmPelsHeight);
+				return FitsWindowedResolution(Resolution, QueryDesktop());
 			}
 
 			DEVMODEW Mode = {};
@@ -434,13 +442,16 @@ void FLordSimulatorSettings::ApplyStartupDisplay()
 			}
 			return false;
 		},
-		[](FIntPoint Resolution, bool bFullscreen)
+		[Window, Handle](FIntPoint Resolution, bool bFullscreen)
 		{
 			const EWindowMode::Type Mode = bFullscreen ? EWindowMode::Fullscreen : EWindowMode::Windowed;
 			FSystemResolution::RequestResolutionChange(Resolution.X, Resolution.Y, Mode);
 			IConsoleManager::Get().CallAllConsoleVariableSinks();
-			return GSystemResolution.ResX == Resolution.X && GSystemResolution.ResY == Resolution.Y
-				&& GSystemResolution.WindowMode == Mode;
+			RECT Client = {};
+			return GetClientRect(Handle, &Client)
+				&& FIntPoint(Client.right - Client.left, Client.bottom - Client.top) == Resolution
+				&& Window->GetWindowMode() == Mode
+				&& GEngine->GameViewport->Viewport->GetSizeXY() == Resolution;
 		},
 		[](const FString& Message) { LS_LOG_DEFAULT(Message); });
 #endif
@@ -542,7 +553,10 @@ bool FLordDisplaySettingsTest::RunTest(const FString&)
 		TArray<FString> Logs;
 		ApplyDisplay(Read.Data, Read.Display,
 			[&]() { ++Detections; return Desktop; },
-			[&](FIntPoint, bool) { return bAvailable; },
+			[&](FIntPoint Resolution, bool bMode)
+			{
+				return bMode ? bAvailable : FitsWindowedResolution(Resolution, bAvailable ? Desktop : FIntPoint::ZeroValue);
+			},
 			[&](FIntPoint Resolution, bool bMode)
 			{
 				TestEqual(TEXT("Applied fullscreen mode"), bMode, bFullscreen);
@@ -583,6 +597,7 @@ bool FLordDisplaySettingsTest::RunTest(const FString&)
 		Check(Bad, TEXT("1080"), TEXT("1"), true, true, true, true, true);
 		Check(TEXT("1920"), Bad, TEXT("0"), true, true, true, true, false);
 	}
+	// A failed desktop query returns ZeroValue and must reject the explicit windowed size.
 	Check(TEXT("1920"), TEXT("1080"), TEXT("0"), false, true, true, true, false);
 	Check(TEXT("1920"), TEXT("1080"), TEXT("0"), true, false, true, true, false);
 	return true;
