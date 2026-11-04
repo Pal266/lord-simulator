@@ -12,10 +12,15 @@ struct FLordSimulatorSettingsData
 	/** Persistent setting `LogMode`. Default: `Default`. */
 	ELordSimulatorLogMode LogMode = ELordSimulatorLogMode::Default;
 	FString Language = TEXT("en");
+	FString Width = TEXT("auto");
+	FString Height = TEXT("auto");
+	bool bFullscreen = true;
 
 	bool operator==(const FLordSimulatorSettingsData& Other) const
 	{
-		return LogMode == Other.LogMode && Language.Equals(Other.Language, ESearchCase::CaseSensitive);
+		return LogMode == Other.LogMode && Language.Equals(Other.Language, ESearchCase::CaseSensitive)
+			&& Width.Equals(Other.Width, ESearchCase::CaseSensitive)
+			&& Height.Equals(Other.Height, ESearchCase::CaseSensitive) && bFullscreen == Other.bFullscreen;
 	}
 
 	bool operator!=(const FLordSimulatorSettingsData& Other) const
@@ -41,6 +46,9 @@ public:
 	 * Creates the settings file with default values when it does not exist.
 	 */
 	static void Load();
+
+	/** Applies the loaded display configuration to the standalone game window. */
+	static void ApplyStartupDisplay();
 
 	/**
 	 * Compares the settings file with the in-memory settings object and writes the complete
