@@ -23,6 +23,7 @@ public:
 		FLordSimulatorLog::SetMode(FLordSimulatorSettings::Get().LogMode);
 		FLordSimulatorLocalization::ApplyStartupLanguage();
 		LS_LOG_DEFAULT(TEXT("Settings loading completed."));
+		FLordSimulatorSettings::ApplyStartupDisplay();
 		FLordSimulatorLocalization::CompleteStartup();
 #if WITH_EDITOR
 		if (GIsEditor && !IsRunningCommandlet())
