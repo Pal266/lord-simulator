@@ -31,6 +31,10 @@ private:
 	void UpdateQuitPresentation();
 
 	UFUNCTION()
+	void HandleNewGameClicked();
+	UFUNCTION()
+	void UpdateNewGamePresentation();
+	UFUNCTION()
 	void HandleQuitClicked();
 	UFUNCTION()
 	void HandleQuitHovered();

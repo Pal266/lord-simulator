@@ -5,6 +5,11 @@
 	"Description": "",
 	"Modules": [
 		{
+			"Name": "LordSimulatorEditor",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
+		},
+		{
 			"Name": "LordSimulator",
 			"Type": "Runtime",
 			"LoadingPhase": "PostEngineInit"
@@ -19,6 +24,10 @@
 		"Windows"
 	],
 	"Plugins": [
+		{
+			"Name": "Water",
+			"Enabled": true
+		},
 		{
 			"Name": "CommonUI",
 			"Enabled": true

@@ -205,7 +205,10 @@ Table->GetStringTable()->EnumerateSourceStrings(
 		return true;
 	});
 
-TestEqual(TEXT("Four production String Table entries"), Entries.Num(), 4);
+TestEqual(TEXT("Seven production String Table entries"), Entries.Num(), 7);
+TestEqual(TEXT("Region selection title source"), Entries.FindRef(TEXT("NewGame.RegionSelection.Title")), FString(TEXT("Select a region")));
+TestEqual(TEXT("Region selection back source"), Entries.FindRef(TEXT("NewGame.RegionSelection.Back")), FString(TEXT("Back")));
+TestEqual(TEXT("Region selection failure source"), Entries.FindRef(TEXT("NewGame.RegionSelection.LoadFailed")), FString(TEXT("Unable to load the selected region.")));
 
 TestEqual(
 	TEXT("MainMenu.NewGame source"),
@@ -404,7 +407,8 @@ bool FLordLocalizationCzechUkrainianTest::RunTest(const FString&)
 	TestNotNull(TEXT("Asset table"), Table);
 	if (!Table) return false;
 	const FName TableId = Table->GetStringTableId();
-	const TCHAR* Keys[] = {TEXT("MainMenu.NewGame"), TEXT("MainMenu.LoadGame"), TEXT("MainMenu.Settings"), TEXT("MainMenu.Quit")};
+	const TCHAR* Keys[] = {TEXT("MainMenu.NewGame"), TEXT("MainMenu.LoadGame"), TEXT("MainMenu.Settings"), TEXT("MainMenu.Quit"),
+		TEXT("NewGame.RegionSelection.Title"), TEXT("NewGame.RegionSelection.Back"), TEXT("NewGame.RegionSelection.LoadFailed")};
 	TArray<FText> Labels;
 	for (const TCHAR* Key : Keys) Labels.Add(FText::FromStringTable(TableId, Key));
 	const TMap<FString, TArray<FString>> Expected = {
@@ -413,8 +417,14 @@ bool FLordLocalizationCzechUkrainianTest::RunTest(const FString&)
 		{TEXT("uk"), {TEXT("\u041D\u041E\u0412\u0410 \u0413\u0420\u0410"), TEXT("\u0417\u0410\u0412\u0410\u041D\u0422\u0410\u0416\u0418\u0422\u0418"), TEXT("\u041F\u0410\u0420\u0410\u041C\u0415\u0422\u0420\u0418"), TEXT("\u0412\u0418\u0419\u0422\u0418")}}};
 	auto CheckLabels = [&](const FString& Culture)
 	{
-		for (int32 Index = 0; Index < Labels.Num(); ++Index)
+		for (int32 Index = 0; Index < 4; ++Index)
 			TestEqual(FString::Printf(TEXT("%s %s"), *Culture, Keys[Index]), Labels[Index].ToString(), Expected.FindChecked(Culture)[Index]);
+		const TMap<FString, TArray<FString>> RegionExpected = {
+			{TEXT("en"), {TEXT("Select a region"), TEXT("Back"), TEXT("Unable to load the selected region.")}},
+			{TEXT("cs"), {TEXT("Vyberte oblast"), TEXT("Zpět"), TEXT("Vybranou oblast se nepodařilo načíst.")}},
+			{TEXT("uk"), {TEXT("Виберіть регіон"), TEXT("Назад"), TEXT("Не вдалося завантажити вибраний регіон.")}}};
+		for (int32 Index = 4; Index < Labels.Num(); ++Index)
+			TestEqual(FString::Printf(TEXT("%s %s"), *Culture, Keys[Index]), Labels[Index].ToString(), RegionExpected.FindChecked(Culture)[Index - 4]);
 	};
 
 	// Production state machine and Unreal application adapter with in-memory settings,

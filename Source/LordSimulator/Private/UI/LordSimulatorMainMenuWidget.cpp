@@ -5,6 +5,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Styling/CoreStyle.h"
+#include "Engine/LocalPlayer.h"
+#include "Region/LordSimulatorRegionSubsystem.h"
 
 namespace LordSimulatorMainMenu
 {
@@ -30,12 +32,20 @@ void ULordSimulatorMainMenuWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	ConfigureButton(NewGameButton, false, false);
+	ConfigureButton(NewGameButton, true, true);
 	ConfigureButton(LoadGameButton, false, false);
 	ConfigureButton(SettingsButton, false, false);
 	ConfigureButton(QuitButton, true, true);
 
-	ConfigureLabel(NewGameLabel, TEXT("MainMenu.NewGame"), LordSimulatorMainMenu::DisabledColor);
+	ConfigureLabel(NewGameLabel, TEXT("MainMenu.NewGame"), LordSimulatorMainMenu::EnabledNormalColor);
+	if (NewGameButton)
+	{
+		NewGameButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleNewGameClicked);
+		NewGameButton->OnHovered.AddUniqueDynamic(this, &ThisClass::UpdateNewGamePresentation);
+		NewGameButton->OnUnhovered.AddUniqueDynamic(this, &ThisClass::UpdateNewGamePresentation);
+		NewGameButton->OnPressed.AddUniqueDynamic(this, &ThisClass::UpdateNewGamePresentation);
+		NewGameButton->OnReleased.AddUniqueDynamic(this, &ThisClass::UpdateNewGamePresentation);
+	}
 	ConfigureLabel(LoadGameLabel, TEXT("MainMenu.LoadGame"), LordSimulatorMainMenu::DisabledColor);
 	ConfigureLabel(SettingsLabel, TEXT("MainMenu.Settings"), LordSimulatorMainMenu::DisabledColor);
 	ConfigureLabel(QuitLabel, TEXT("MainMenu.Quit"), LordSimulatorMainMenu::EnabledNormalColor);
@@ -52,11 +62,29 @@ void ULordSimulatorMainMenuWidget::NativeOnInitialized()
 	UpdateQuitPresentation();
 }
 
+void ULordSimulatorMainMenuWidget::HandleNewGameClicked()
+{
+	if (ULocalPlayer* Player = GetOwningLocalPlayer()) Player->GetSubsystem<ULordSimulatorRegionSubsystem>()->OpenSelection();
+}
+
+void ULordSimulatorMainMenuWidget::UpdateNewGamePresentation()
+{
+	if (!NewGameButton || !NewGameLabel) return;
+	const bool bHoverOrFocus = NewGameButton->IsHovered() || NewGameButton->HasKeyboardFocus();
+	const bool bPressed = NewGameButton->IsPressed();
+	FButtonStyle Style = MainMenuButtonStyle;
+	if (bHoverOrFocus && !bPressed) Style.SetNormal(MainMenuButtonStyle.Hovered);
+	NewGameButton->SetStyle(Style);
+	NewGameLabel->SetColorAndOpacity(bPressed ? LordSimulatorMainMenu::EnabledPressedColor
+		: bHoverOrFocus ? LordSimulatorMainMenu::EnabledHoverColor : LordSimulatorMainMenu::EnabledNormalColor);
+}
+
 void ULordSimulatorMainMenuWidget::NativeOnActivated()
 {
 	Super::NativeOnActivated();
 	bQuitPressed = false;
 	UpdateQuitPresentation();
+	UpdateNewGamePresentation();
 }
 
 UWidget* ULordSimulatorMainMenuWidget::NativeGetDesiredFocusTarget() const
@@ -70,6 +98,7 @@ void ULordSimulatorMainMenuWidget::NativeOnAddedToFocusPath(const FFocusEvent& I
 	Super::NativeOnAddedToFocusPath(InFocusEvent);
 	bQuitFocusPath = true;
 	UpdateQuitPresentation();
+	UpdateNewGamePresentation();
 }
 
 void ULordSimulatorMainMenuWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent)
@@ -77,6 +106,7 @@ void ULordSimulatorMainMenuWidget::NativeOnRemovedFromFocusPath(const FFocusEven
 	Super::NativeOnRemovedFromFocusPath(InFocusEvent);
 	bQuitFocusPath = false;
 	UpdateQuitPresentation();
+	UpdateNewGamePresentation();
 }
 
 void ULordSimulatorMainMenuWidget::ConfigureButton(ULordSimulatorMainMenuButton* Button, bool bEnabled, bool bFocusable)
