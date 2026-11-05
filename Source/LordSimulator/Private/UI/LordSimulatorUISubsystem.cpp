@@ -84,6 +84,11 @@ bool ULordSimulatorUISubsystem::EnsureInitialMainMenu()
 	return bInitialMainMenuPresented;
 }
 
+void ULordSimulatorUISubsystem::DismissInitialMainMenuForPlot()
+{
+	if (MainMenu) RemoveWidget(ELordSimulatorUILayer::Menu, MainMenu);
+}
+
 bool ULordSimulatorUISubsystem::IsUIAvailable() const
 {
 	return IsValid(PrimaryLayout) && PrimaryLayout->IsInViewport();

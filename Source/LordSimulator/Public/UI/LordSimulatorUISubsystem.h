@@ -31,6 +31,7 @@ public:
 	bool PopWidget(ELordSimulatorUILayer Layer);
 
 	const ULordSimulatorPrimaryUILayout* GetPrimaryLayout() const;
+	void DismissInitialMainMenuForPlot();
 private:
 	friend struct FLordSimulatorUITestAccess;
 	bool TryInitialize(bool bLocalizationStartupComplete);

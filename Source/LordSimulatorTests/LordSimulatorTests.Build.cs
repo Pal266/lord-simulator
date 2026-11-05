@@ -7,7 +7,7 @@ public class LordSimulatorTests : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"Core", "CoreUObject", "Engine", "LordSimulator", "UMG", "CommonUI", "CommonInput",
-			"Slate", "SlateCore", "UnrealEd"
+			"Slate", "SlateCore", "UnrealEd", "InputCore"
 		});
 	}
 }

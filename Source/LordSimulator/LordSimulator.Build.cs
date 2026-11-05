@@ -8,6 +8,7 @@ public class LordSimulator : ModuleRules
 		CppStandard = CppStandardVersion.Cpp20;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "UMG", "CommonUI", "CommonInput", "Slate", "SlateCore" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Landscape", "InputCore" });
 		if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.AddRange(new string[] { "Localization", "UnrealEd" });

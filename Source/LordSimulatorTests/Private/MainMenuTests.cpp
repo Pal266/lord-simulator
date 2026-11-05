@@ -112,8 +112,14 @@ bool FLordSimulatorMainMenuTest::RunTest(const FString&)
 		TestEqual(TEXT("Repeated initialization preserves the same main-menu instance"),
 			Root->GetTopWidget(ELordSimulatorUILayer::Menu), static_cast<UUserWidget*>(Menu));
 
-		for (UButton* Disabled : {FLordSimulatorMainMenuTestAccess::NewGame(Menu),
-			FLordSimulatorMainMenuTestAccess::LoadGame(Menu), FLordSimulatorMainMenuTestAccess::Settings(Menu)})
+		UButton* NewGame = FLordSimulatorMainMenuTestAccess::NewGame(Menu);
+		TestNotNull(TEXT("New Game button bound"), NewGame);
+		if (NewGame)
+		{
+			TestTrue(TEXT("New Game enabled"), NewGame->GetIsEnabled());
+			TestTrue(TEXT("New Game focusable"), NewGame->GetIsFocusable());
+		}
+		for (UButton* Disabled : {FLordSimulatorMainMenuTestAccess::LoadGame(Menu), FLordSimulatorMainMenuTestAccess::Settings(Menu)})
 		{
 			TestNotNull(TEXT("Disabled button bound"), Disabled);
 			if (!Disabled) continue;
